@@ -1,18 +1,30 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Mail, Lock, Eye, EyeOff, LogIn, Home } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 
-const LoginForm = () => {
-  const [formData, setFormData] = useState({
+interface FormData {
+  email: string;
+  password: string;
+}
+
+interface FormErrors {
+  email?: string;
+  password?: string;
+  api?: string;
+}
+
+const LoginForm: React.FC = () => {
+  const [formData, setFormData] = useState<FormData>({
     email: '',
     password: ''
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const navigate = useNavigate();
 
-  const validateForm = () => {
-    const newErrors = {};
+  const validateForm = (): FormErrors => {
+    const newErrors: FormErrors = {};
     
     if (!formData.email.trim()) newErrors.email = 'Please enter your email';
     else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Please enter a valid email';
@@ -21,21 +33,39 @@ const LoginForm = () => {
     return newErrors;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors = validateForm();
     setErrors(newErrors);
     
     if (Object.keys(newErrors).length === 0) {
       setIsSubmitting(true);
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log('Login values:', formData);
-      setIsSubmitting(false);
+      try {
+        const response = await fetch('http://localhost:3000/api/auth/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          setErrors({ api: data.message || 'Login failed' });
+        } else {
+          // Store user info in localStorage
+          localStorage.setItem('user', JSON.stringify(data.user || data));
+          // Redirect to home
+          navigate('/');
+        }
+      } catch (error) {
+        setErrors({ api: 'Network error. Please try again.' });
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
-  const handleInputChange = (field, value) => {
+  const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -48,6 +78,16 @@ const LoginForm = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: '#FFFFFF' }}>
+      {/* Back to Home Button */}
+      <div className="absolute top-4 left-4">
+        <Link to="/">
+          <button className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors text-gray-700">
+            <Home size={16} />
+            <span>Back to Home</span>
+          </button>
+        </Link>
+      </div>
+      
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
@@ -114,6 +154,8 @@ const LoginForm = () => {
                 </button>
               </div>
               {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
+              {/* API Error */}
+              {errors.api && <p className="text-red-500 text-sm mt-1">{errors.api}</p>}
             </div>
 
             {/* Remember Me & Forgot Password */}
@@ -141,8 +183,8 @@ const LoginForm = () => {
                 backgroundColor: '#5A827E',
                 boxShadow: '0 4px 15px rgba(90, 130, 126, 0.3)'
               }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#4a6b67'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#5A827E'}
+              onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#4a6b67'}
+              onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#5A827E'}
             >
               {isSubmitting ? (
                 <div className="flex items-center justify-center">
@@ -171,12 +213,12 @@ const LoginForm = () => {
               backgroundColor: '#B9D4AA'
             }}
             onMouseEnter={(e) => {
-              e.target.style.borderColor = '#5A827E';
-              e.target.style.backgroundColor = '#a8c99a';
+              (e.target as HTMLButtonElement).style.borderColor = '#5A827E';
+              (e.target as HTMLButtonElement).style.backgroundColor = '#a8c99a';
             }}
             onMouseLeave={(e) => {
-              e.target.style.borderColor = '#84AE92';
-              e.target.style.backgroundColor = '#B9D4AA';
+              (e.target as HTMLButtonElement).style.borderColor = '#84AE92';
+              (e.target as HTMLButtonElement).style.backgroundColor = '#B9D4AA';
             }}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -203,4 +245,4 @@ const LoginForm = () => {
   );
 };
 
-export default LoginForm;
+export default LoginForm; 

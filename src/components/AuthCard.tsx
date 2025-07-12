@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import LoginForm from './LoginForm';
 import RegisterForm from './RegisterForm';
 
-const AuthCard = () => {
-  const [activeTab, setActiveTab] = useState('login');
+type TabType = 'login' | 'register';
+
+const AuthCard: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<TabType>('login');
 
   return (
     <div className="min-h-screen bg-background">

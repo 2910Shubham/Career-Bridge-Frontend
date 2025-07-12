@@ -2,51 +2,118 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  color-scheme: light;
-  color: #333333;
-  background-color: #FFFFFF;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* CareerBridge Light Mode Design System */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 20%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 20%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 20%;
+
+    /* Primary: Deep Teal #5A827E */
+    --primary: 175 17% 43%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 175 25% 55%;
+
+    /* Secondary: Soft Green #84AE92 */
+    --secondary: 145 23% 60%;
+    --secondary-foreground: 0 0% 20%;
+
+    /* Accent: Light Green #B9D4AA */
+    --accent: 95 32% 75%;
+    --accent-foreground: 0 0% 20%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 90%;
+    --input: 0 0% 95%;
+    --ring: 175 17% 43%;
+
+    /* Custom design tokens */
+    --gradient-hero: linear-gradient(135deg, hsl(175 17% 43%), hsl(145 23% 60%));
+    --gradient-accent: linear-gradient(90deg, hsl(95 32% 75%), hsl(145 23% 60%));
+    --shadow-elegant: 0 10px 30px -10px hsl(175 17% 43% / 0.2);
+    --shadow-card: 0 4px 12px -2px hsl(0 0% 0% / 0.1);
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+
+    --sidebar-foreground: 240 5.3% 26.1%;
+
+    --sidebar-primary: 240 5.9% 10%;
+
+    --sidebar-primary-foreground: 0 0% 98%;
+
+    --sidebar-accent: 240 4.8% 95.9%;
+
+    --sidebar-accent-foreground: 240 5.9% 10%;
+
+    --sidebar-border: 220 13% 91%;
+
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    /* CareerBridge Dark Mode Design System */
+    --background: 175 17% 43%;
+    --foreground: 0 0% 100%;
+
+    --card: 0 0% 13%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 0 0% 13%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 0 0% 100%;
+    --primary-foreground: 175 17% 43%;
+    --primary-glow: 95 32% 75%;
+
+    --secondary: 0 0% 13%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 65%;
+
+    --accent: 95 32% 75%;
+    --accent-foreground: 0 0% 13%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 25%;
+    --input: 0 0% 20%;
+    --ring: 95 32% 75%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
 }
 
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-}
+@layer base {
+  * {
+    @apply border-border;
+  }
 
-/* Custom styles for Ant Design components */
-.ant-btn-primary {
-  background-color: #5A827E !important;
-  border-color: #5A827E !important;
-}
-
-.ant-btn-primary:hover {
-  background-color: #84AE92 !important;
-  border-color: #84AE92 !important;
-}
-
-.ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
-  color: #5A827E !important;
-}
-
-.ant-tabs-ink-bar {
-  background-color: #5A827E !important;
-}
-
-.ant-input:focus,
-.ant-input-focused {
-  border-color: #5A827E !important;
-  box-shadow: 0 0 0 2px rgba(90, 130, 126, 0.2) !important;
-}
-
-.ant-form-item-label > label {
-  color: #333333 !important;
-  font-weight: 500 !important;
+  body {
+    @apply bg-background text-foreground;
+  }
 }
