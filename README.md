@@ -1,73 +1,116 @@
-# Welcome to your Lovable project
+# CareerBridge
 
-## Project info
+![Vite](https://img.shields.io/badge/Vite-5.4.1-646CFF?logo=vite&logoColor=white)
+![React](https://img.shields.io/badge/React-18.3.1-61DAFB?logo=react&logoColor=white)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4.11-38BDF8?logo=tailwindcss&logoColor=white)
+![shadcn/ui](https://img.shields.io/badge/shadcn--ui-Radix-8B5CF6?logo=radixui&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-green)
 
-**URL**: https://lovable.dev/projects/301304e1-e8ba-4209-9163-0cabfa50487a
+---
 
-## How can I edit this code?
+## 🚀 CareerBridge
 
-There are several ways of editing your application.
+CareerBridge is a modern, beautiful, and scalable job platform built with React, Vite, TailwindCSS, and shadcn/ui. It features a robust design system, dark mode, and a modular architecture for rapid development and easy customization.
 
-**Use Lovable**
+---
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/301304e1-e8ba-4209-9163-0cabfa50487a) and start prompting.
+## ✨ Features
 
-Changes made via Lovable will be committed automatically to this repo.
+- ⚡ **Vite** for lightning-fast development
+- 🎨 **TailwindCSS** with custom design tokens and dark mode
+- 🧩 **shadcn/ui** (Radix UI) for accessible, composable UI components
+- 🌗 **Dark/Light Theme** with `next-themes`
+- 🔥 **React Query** for data fetching and caching
+- 🛠️ **Reusable UI Components** (Toasts, Tooltips, Modals, etc.)
+- 🧑‍💼 **Job Feed, Auth, and More** (extendable for your needs)
+- 🛡️ **TypeScript Ready** (or JavaScript, as you prefer)
+- 🧪 **Easy Testing & Linting**
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## 🗂️ Folder Structure
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```
+Frontend Career Bridge/
+├── public/
+├── src/
+│   ├── assets/
+│   ├── components/
+│   │   ├── ui/           # shadcn/ui components
+│   ├── hooks/            # Custom React hooks
+│   ├── lib/              # Utility functions
+│   ├── pages/            # App pages (Index, NotFound, etc.)
+│   ├── App.jsx           # App entry
+│   ├── main.jsx          # Main render
+│   └── index.css         # Tailwind & design system
+├── tailwind.config.js    # Tailwind config
+├── vite.config.js        # Vite config
+├── package.json
+└── README.md
+```
 
-Follow these steps:
+---
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## 🛠️ Tech Stack
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+- **React 18**
+- **Vite 5**
+- **TailwindCSS 3**
+- **shadcn/ui** (Radix UI)
+- **React Query**
+- **next-themes**
+- **clsx, tailwind-merge**
+- **Zod, React Hook Form**
 
-# Step 3: Install the necessary dependencies.
-npm i
+---
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+## 🚦 Getting Started
+
+### 1. Clone the repo
+```bash
+git clone https://github.com/your-username/career-bridge.git
+cd career-bridge
+```
+
+### 2. Install dependencies
+```bash
+npm install
+```
+
+### 3. Start the development server
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Visit [http://localhost:5173](http://localhost:5173) to view the app.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+---
 
-**Use GitHub Codespaces**
+## 🌈 Customization
+- Edit `src/index.css` for your design system (colors, gradients, etc.)
+- Add or modify UI components in `src/components/ui/`
+- Add new pages in `src/pages/`
+- Update routes in `src/App.jsx`
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+---
 
-## What technologies are used for this project?
+## 🤝 Contributing
 
-This project is built with:
+1. Fork the repo
+2. Create your feature branch (`git checkout -b feature/YourFeature`)
+3. Commit your changes (`git commit -m 'Add some feature'`)
+4. Push to the branch (`git push origin feature/YourFeature`)
+5. Open a Pull Request
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+---
 
-## How can I deploy this project?
+## 📄 License
 
-Simply open [Lovable](https://lovable.dev/projects/301304e1-e8ba-4209-9163-0cabfa50487a) and click on Share -> Publish.
+This project is licensed under the MIT License.
 
-## Can I connect a custom domain to my Lovable project?
+---
 
-Yes, you can!
+## 💡 Inspiration
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Built with ❤️ using [shadcn/ui](https://ui.shadcn.com/), [Vite](https://vitejs.dev/), and [TailwindCSS](https://tailwindcss.com/).
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
