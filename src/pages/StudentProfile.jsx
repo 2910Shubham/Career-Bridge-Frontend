@@ -8,6 +8,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, MapPin, Calendar, Award, Code, Heart, MessageCircle, Share2, Edit3, Image, X } from "lucide-react";
+import Navbar from "@/components/Navbar";
 
 const mockProfile = {
   name: "Jane Doe",
@@ -114,7 +115,8 @@ export default function StudentProfile() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 w-full">
+      <Navbar />
       <style jsx global>{`
         .gradient-hero {
           background: linear-gradient(135deg, hsl(175 17% 43%), hsl(145 23% 60%));
@@ -133,7 +135,7 @@ export default function StudentProfile() {
         }
       `}</style>
       
-      <div className="container mx-auto max-w-4xl py-8 px-4">
+      <div className="container mx-auto max-w-6xl py-8 px-4">
         {/* Hero Section */}
         <div className="gradient-hero rounded-3xl p-8 text-white shadow-elegant mb-8 relative overflow-hidden">
           <div className="absolute inset-0 bg-black/10"></div>
