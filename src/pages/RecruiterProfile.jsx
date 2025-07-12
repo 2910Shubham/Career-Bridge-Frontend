@@ -136,8 +136,10 @@ export default function RecruiterProfile() {
     type: "Full-time",
     salary: "",
     description: "",
-    requirements: ""
+    requirements: "",
+    skills: [],
   });
+  const [newSkill, setNewSkill] = useState("");
 
   const handleAddAchievement = () => {
     if (newAchievement.trim()) {
@@ -211,10 +213,24 @@ export default function RecruiterProfile() {
         type: "Full-time",
         salary: "",
         description: "",
-        requirements: ""
+        requirements: "",
+        skills: [],
       });
+      setNewSkill("");
       setShowJobDialog(false);
     }
+  };
+
+  const handleAddSkill = (e) => {
+    if ((e.key === "Enter" || e.type === "blur") && newSkill.trim()) {
+      if (!newJob.skills.includes(newSkill.trim())) {
+        setNewJob({ ...newJob, skills: [...newJob.skills, newSkill.trim()] });
+      }
+      setNewSkill("");
+    }
+  };
+  const handleRemoveSkill = (skill) => {
+    setNewJob({ ...newJob, skills: newJob.skills.filter((s) => s !== skill) });
   };
 
   return (
@@ -522,6 +538,31 @@ export default function RecruiterProfile() {
                             value={newJob.description}
                             onChange={(e) => setNewJob({...newJob, description: e.target.value})}
                             className="min-h-[100px]"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-slate-700 mb-2 block">Required Sills</label>
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            {newJob.skills.map((skill, idx) => (
+                              <span key={idx} className="inline-flex items-center bg-accent text-accent-foreground px-3 py-1 rounded-full text-sm">
+                                {skill}
+                                <button
+                                  type="button"
+                                  className="ml-2 text-red-500 hover:text-red-700 focus:outline-none"
+                                  onClick={() => handleRemoveSkill(skill)}
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                          <Input
+                            placeholder="Add a skill and press Enter..."
+                            value={newSkill}
+                            onChange={(e) => setNewSkill(e.target.value)}
+                            onKeyDown={handleAddSkill}
+                            onBlur={handleAddSkill}
+                            className="mb-2"
                           />
                         </div>
                         
