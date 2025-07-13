@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,8 +9,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, MapPin, Calendar, Award, Briefcase, Heart, MessageCircle, Share2, Edit3, Image, X, Users, TrendingUp, Eye, FileText, Building, DollarSign, Clock } from "lucide-react";
+import { Plus, MapPin, Calendar, Award, Briefcase, Heart, MessageCircle, Share2, Edit3, Image, X, Users, TrendingUp, Eye, FileText, Building, DollarSign, Clock, Settings } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import JobPostForm from "@/components/JobPostForm";
+import EditProfileForm from "@/components/EditProfileForm";
+import { getStoredUser } from '@/lib/auth';
 
 const mockProfile = {
   name: "Sarah Johnson",
@@ -122,12 +125,13 @@ const mockApplications = [
 export default function RecruiterProfile() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showNewPostDialog, setShowNewPostDialog] = useState(false);
-  const [showJobDialog, setShowJobDialog] = useState(false);
-  const [achievements, setAchievements] = useState(mockProfile.achievements);
+  const [showJobForm, setShowJobForm] = useState(false);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [achievements, setAchievements] = useState([]);
   const [newAchievement, setNewAchievement] = useState("");
   const [likedPosts, setLikedPosts] = useState(new Set());
-  const [posts, setPosts] = useState(mockProfile.posts);
-  const [jobPosts, setJobPosts] = useState(mockProfile.jobPosts);
+  const [posts, setPosts] = useState([]);
+  const [jobPosts, setJobPosts] = useState([]);
   const [newPost, setNewPost] = useState({ description: "", images: [] });
   const [previewImages, setPreviewImages] = useState([]);
   const [newJob, setNewJob] = useState({
@@ -140,6 +144,17 @@ export default function RecruiterProfile() {
     skills: [],
   });
   const [newSkill, setNewSkill] = useState("");
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const storedUser = getStoredUser();
+    setUser(storedUser);
+    if (storedUser) {
+      setAchievements(storedUser.achievements || []);
+      setPosts(storedUser.posts || []);
+      setJobPosts(storedUser.recruiterInfo?.jobPosts || []);
+    }
+  }, []);
 
   const handleAddAchievement = () => {
     if (newAchievement.trim()) {
@@ -193,32 +208,22 @@ export default function RecruiterProfile() {
     }
   };
 
-  const handleCreateJob = () => {
-    if (newJob.title.trim() && newJob.location.trim()) {
-      const job = {
-        id: Date.now(),
-        title: newJob.title.trim(),
-        company: mockProfile.company,
-        location: newJob.location.trim(),
-        type: newJob.type,
-        salary: newJob.salary.trim(),
-        applicants: 0,
-        posted: "just now",
-        status: "Active"
-      };
-      setJobPosts([job, ...jobPosts]);
-      setNewJob({
-        title: "",
-        location: "",
-        type: "Full-time",
-        salary: "",
-        description: "",
-        requirements: "",
-        skills: [],
-      });
-      setNewSkill("");
-      setShowJobDialog(false);
-    }
+  const handleCreateJob = (jobData) => {
+    const job = {
+      id: Date.now(),
+      title: jobData.jobTitle,
+      company: jobData.companyName,
+      location: jobData.jobLocation,
+      type: jobData.jobType,
+      salary: jobData.salaryRange,
+      description: jobData.jobDescription,
+      skills: jobData.skillsRequired,
+      deadline: jobData.applicationDeadline,
+      status: jobData.jobStatus,
+      applicants: 0,
+      posted: "just now",
+    };
+    setJobPosts([job, ...jobPosts]);
   };
 
   const handleAddSkill = (e) => {
@@ -231,6 +236,13 @@ export default function RecruiterProfile() {
   };
   const handleRemoveSkill = (skill) => {
     setNewJob({ ...newJob, skills: newJob.skills.filter((s) => s !== skill) });
+  };
+
+  const handleSaveProfile = (updatedUser) => {
+    // Here you would typically make an API call to update the user profile
+    console.log('Profile updated:', updatedUser);
+    // For now, we'll just close the dialog
+    setShowEditProfile(false);
   };
 
   return (
@@ -261,33 +273,37 @@ export default function RecruiterProfile() {
           <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
             <div className="relative">
               <Avatar className="w-32 h-32 border-4 border-white/20 shadow-card">
-                <AvatarImage src={mockProfile.profilePic} alt={mockProfile.name} />
-                <AvatarFallback className="text-2xl bg-white/20">SJ</AvatarFallback>
+                <AvatarImage src={user?.profilePicture || '/default-avatar.png'} alt={user?.fullname || 'User'} />
+                <AvatarFallback className="text-2xl bg-white/20">{user?.fullname ? user.fullname.split(' ').map(n => n[0]).join('') : 'U'}</AvatarFallback>
               </Avatar>
               <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-400 rounded-full border-4 border-white flex items-center justify-center">
                 <div className="w-3 h-3 bg-white rounded-full"></div>
               </div>
             </div>
-            
             <div className="flex-1 text-center md:text-left">
-              <h1 className="text-4xl font-bold mb-2">{mockProfile.name}</h1>
-              <p className="text-xl text-white/90 mb-4">{mockProfile.bio}</p>
+              <div className="flex items-center gap-4 mb-2">
+                <h1 className="text-4xl font-bold">{user?.fullname || 'User'}</h1>
+                <Button 
+                  onClick={() => setShowEditProfile(true)}
+                  size="sm"
+                  className="transition-smooth hover:scale-105"
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Edit Profile
+                </Button>
+              </div>
+              <p className="text-xl text-white/90 mb-4">{user?.bio}</p>
               <div className="flex flex-wrap gap-4 justify-center md:justify-start text-sm">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4" />
-                  <span>{mockProfile.location}</span>
+                  <span>{user?.location}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Building className="w-4 h-4" />
-                  <span>{mockProfile.company} • {mockProfile.title}</span>
+                  <span>{user?.recruiterInfo?.companyName} • {user?.recruiterInfo?.designation}</span>
                 </div>
               </div>
             </div>
-            
-            <Button variant="secondary" className="bg-white/20 hover:bg-white/30 border-white/30 backdrop-blur-sm">
-              <Edit3 className="w-4 h-4 mr-2" />
-              Edit Profile
-            </Button>
           </div>
         </div>
 
@@ -411,7 +427,7 @@ export default function RecruiterProfile() {
                       <div className="space-y-4">
                         <div className="flex items-start gap-4">
                           <Avatar className="w-10 h-10">
-                            <AvatarImage src={mockProfile.profilePic} alt={mockProfile.name} />
+                            <AvatarImage src={user?.profilePicture || '/default-avatar.png'} alt={user?.fullname || 'User'} />
                             <AvatarFallback>SJ</AvatarFallback>
                           </Avatar>
                           <div className="flex-1">
@@ -475,108 +491,14 @@ export default function RecruiterProfile() {
                     </DialogContent>
                   </Dialog>
                   {/* Post New Job Button */}
-                  <Dialog open={showJobDialog} onOpenChange={setShowJobDialog}>
-                    <DialogTrigger asChild>
-                      <Button variant="outline" className="transition-smooth hover:scale-105">
-                        <Briefcase className="w-4 h-4 mr-2" />
-                        Post New Job
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                      <DialogHeader>
-                        <DialogTitle>Create Job Post</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-sm font-medium text-slate-700 mb-2 block">Job Title</label>
-                            <Input
-                              placeholder="e.g. Senior Software Engineer"
-                              value={newJob.title}
-                              onChange={(e) => setNewJob({...newJob, title: e.target.value})}
-                            />
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-slate-700 mb-2 block">Location</label>
-                            <Input
-                              placeholder="e.g. New York, NY or Remote"
-                              value={newJob.location}
-                              onChange={(e) => setNewJob({...newJob, location: e.target.value})}
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-sm font-medium text-slate-700 mb-2 block">Job Type</label>
-                            <Select value={newJob.type} onValueChange={(value) => setNewJob({...newJob, type: value})}>
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="Full-time">Full-time</SelectItem>
-                                <SelectItem value="Part-time">Part-time</SelectItem>
-                                <SelectItem value="Contract">Contract</SelectItem>
-                                <SelectItem value="Internship">Internship</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-slate-700 mb-2 block">Salary Range</label>
-                            <Input
-                              placeholder="e.g. $100k - $140k"
-                              value={newJob.salary}
-                              onChange={(e) => setNewJob({...newJob, salary: e.target.value})}
-                            />
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <label className="text-sm font-medium text-slate-700 mb-2 block">Job Description</label>
-                          <Textarea
-                            placeholder="Describe the role, responsibilities, and what you're looking for..."
-                            value={newJob.description}
-                            onChange={(e) => setNewJob({...newJob, description: e.target.value})}
-                            className="min-h-[100px]"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-slate-700 mb-2 block">Required Sills</label>
-                          <div className="flex flex-wrap gap-2 mb-2">
-                            {newJob.skills.map((skill, idx) => (
-                              <span key={idx} className="inline-flex items-center bg-accent text-accent-foreground px-3 py-1 rounded-full text-sm">
-                                {skill}
-                                <button
-                                  type="button"
-                                  className="ml-2 text-red-500 hover:text-red-700 focus:outline-none"
-                                  onClick={() => handleRemoveSkill(skill)}
-                                >
-                                  ×
-                                </button>
-                              </span>
-                            ))}
-                          </div>
-                          <Input
-                            placeholder="Add a skill and press Enter..."
-                            value={newSkill}
-                            onChange={(e) => setNewSkill(e.target.value)}
-                            onKeyDown={handleAddSkill}
-                            onBlur={handleAddSkill}
-                            className="mb-2"
-                          />
-                        </div>
-                        
-                        <div className="flex gap-2 justify-end">
-                          <Button variant="outline" onClick={() => setShowJobDialog(false)}>
-                            Cancel
-                          </Button>
-                          <Button onClick={handleCreateJob} disabled={!newJob.title.trim() || !newJob.location.trim()}>
-                            Post Job
-                          </Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                  <Button 
+                    variant="outline" 
+                    className="transition-smooth hover:scale-105"
+                    onClick={() => setShowJobForm(true)}
+                  >
+                    <Briefcase className="w-4 h-4 mr-2" />
+                    Post New Job
+                  </Button>
                   {/* Recent Applicants Button */}
                   <Button variant="outline" className="transition-smooth hover:scale-105">
                     <Users className="w-4 h-4 mr-2" />
@@ -591,12 +513,12 @@ export default function RecruiterProfile() {
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
                         <Avatar className="w-10 h-10">
-                          <AvatarImage src={mockProfile.profilePic} alt={mockProfile.name} />
+                          <AvatarImage src={user?.profilePicture || '/default-avatar.png'} alt={user?.fullname || 'User'} />
                           <AvatarFallback>SJ</AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <h4 className="font-semibold text-slate-800">{mockProfile.name}</h4>
+                            <h4 className="font-semibold text-slate-800">{user?.fullname || 'User'}</h4>
                             <span className="text-slate-500 text-sm">• {post.timestamp}</span>
                           </div>
                           <p className="text-slate-700 mb-4 leading-relaxed">{post.description}</p>
@@ -647,83 +569,7 @@ export default function RecruiterProfile() {
             <TabsContent value="jobs" className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-slate-800">Job Posts</h2>
-                <Dialog open={showJobDialog} onOpenChange={setShowJobDialog}>
-                  <DialogTrigger asChild>
-                    <Button className="gradient-hero border-0 transition-smooth hover:scale-105">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Create Job Post
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>Create Job Post</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm font-medium text-slate-700 mb-2 block">Job Title</label>
-                          <Input
-                            placeholder="e.g. Senior Software Engineer"
-                            value={newJob.title}
-                            onChange={(e) => setNewJob({...newJob, title: e.target.value})}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-slate-700 mb-2 block">Location</label>
-                          <Input
-                            placeholder="e.g. New York, NY or Remote"
-                            value={newJob.location}
-                            onChange={(e) => setNewJob({...newJob, location: e.target.value})}
-                          />
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm font-medium text-slate-700 mb-2 block">Job Type</label>
-                          <Select value={newJob.type} onValueChange={(value) => setNewJob({...newJob, type: value})}>
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Full-time">Full-time</SelectItem>
-                              <SelectItem value="Part-time">Part-time</SelectItem>
-                              <SelectItem value="Contract">Contract</SelectItem>
-                              <SelectItem value="Internship">Internship</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-slate-700 mb-2 block">Salary Range</label>
-                          <Input
-                            placeholder="e.g. $100k - $140k"
-                            value={newJob.salary}
-                            onChange={(e) => setNewJob({...newJob, salary: e.target.value})}
-                          />
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <label className="text-sm font-medium text-slate-700 mb-2 block">Job Description</label>
-                        <Textarea
-                          placeholder="Describe the role, responsibilities, and what you're looking for..."
-                          value={newJob.description}
-                          onChange={(e) => setNewJob({...newJob, description: e.target.value})}
-                          className="min-h-[100px]"
-                        />
-                      </div>
-                      
-                      <div className="flex gap-2 justify-end">
-                        <Button variant="outline" onClick={() => setShowJobDialog(false)}>
-                          Cancel
-                        </Button>
-                        <Button onClick={handleCreateJob} disabled={!newJob.title.trim() || !newJob.location.trim()}>
-                          Post Job
-                        </Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+                {/* The JobPostForm component is now integrated into the Posts tab header */}
               </div>
 
               <div className="space-y-4">
@@ -850,6 +696,20 @@ export default function RecruiterProfile() {
           </Tabs>
         </div>
       </div>
+
+      {/* Job Post Form */}
+      <JobPostForm 
+        isOpen={showJobForm}
+        onOpenChange={setShowJobForm}
+        onSubmit={handleCreateJob}
+      />
+
+      {/* Edit Profile Form */}
+      <EditProfileForm 
+        isOpen={showEditProfile}
+        onOpenChange={setShowEditProfile}
+        onSave={handleSaveProfile}
+      />
     </div>
   );
 }

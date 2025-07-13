@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,8 +7,10 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, MapPin, Calendar, Award, Code, Heart, MessageCircle, Share2, Edit3, Image, X } from "lucide-react";
+import { Plus, MapPin, Calendar, Award, Code, Heart, MessageCircle, Share2, Edit3, Image, X, Settings } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import EditProfileForm from "@/components/EditProfileForm";
+import { getStoredUser } from '@/lib/auth';
 
 const mockProfile = {
   name: "Jane Doe",
@@ -55,12 +57,23 @@ const mockProfile = {
 export default function StudentProfile() {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showNewPostDialog, setShowNewPostDialog] = useState(false);
-  const [achievements, setAchievements] = useState(mockProfile.achievements);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [achievements, setAchievements] = useState([]);
   const [newAchievement, setNewAchievement] = useState("");
   const [likedPosts, setLikedPosts] = useState(new Set());
-  const [posts, setPosts] = useState(mockProfile.posts);
+  const [posts, setPosts] = useState([]);
   const [newPost, setNewPost] = useState({ description: "", images: [] });
   const [previewImages, setPreviewImages] = useState([]);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const storedUser = getStoredUser();
+    setUser(storedUser);
+    if (storedUser) {
+      setAchievements(storedUser.achievements || []);
+      setPosts(storedUser.posts || []);
+    }
+  }, []);
 
   const handleAddAchievement = () => {
     if (newAchievement.trim()) {
@@ -114,6 +127,13 @@ export default function StudentProfile() {
     }
   };
 
+  const handleSaveProfile = (updatedUser) => {
+    // Here you would typically make an API call to update the user profile
+    console.log('Profile updated:', updatedUser);
+    // For now, we'll just close the dialog
+    setShowEditProfile(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 w-full">
       <Navbar />
@@ -142,8 +162,8 @@ export default function StudentProfile() {
           <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
             <div className="relative">
               <Avatar className="w-32 h-32 border-4 border-white/20 shadow-card">
-                <AvatarImage src={mockProfile.profilePic} alt={mockProfile.name} />
-                <AvatarFallback className="text-2xl bg-white/20">JD</AvatarFallback>
+                <AvatarImage src={user?.profilePicture || '/default-avatar.png'} alt={user?.fullname || 'User'} />
+                <AvatarFallback className="text-2xl bg-white/20">{user?.fullname ? user.fullname.split(' ').map(n => n[0]).join('') : 'U'}</AvatarFallback>
               </Avatar>
               <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-400 rounded-full border-4 border-white flex items-center justify-center">
                 <div className="w-3 h-3 bg-white rounded-full"></div>
@@ -151,24 +171,30 @@ export default function StudentProfile() {
             </div>
             
             <div className="flex-1 text-center md:text-left">
-              <h1 className="text-4xl font-bold mb-2">{mockProfile.name}</h1>
-              <p className="text-xl text-white/90 mb-4">{mockProfile.bio}</p>
+                              <div className="flex items-center gap-4 mb-2">
+                  <h1 className="text-4xl font-bold">{user?.fullname || 'User'}</h1>
+                  <Button 
+                    onClick={() => setShowEditProfile(true)}
+                    size="sm"
+                    className="transition-smooth hover:scale-105"
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    Edit Profile
+                  </Button>
+                </div>
+              <p className="text-xl text-white/90 mb-4">{user?.bio}</p>
               <div className="flex flex-wrap gap-4 justify-center md:justify-start text-sm">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4" />
-                  <span>{mockProfile.location}</span>
+                  <span>{user?.location}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
-                  <span>{mockProfile.university} • {mockProfile.year}</span>
+                  <span>{user?.studentInfo?.university} • {user?.studentInfo?.currentYear}</span>
                 </div>
               </div>
             </div>
             
-            <Button variant="secondary" className="bg-white/20 hover:bg-white/30 border-white/30 backdrop-blur-sm">
-              <Edit3 className="w-4 h-4 mr-2" />
-              Edit Profile
-            </Button>
           </div>
         </div>
 
@@ -185,7 +211,7 @@ export default function StudentProfile() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {mockProfile.skills.map((skill) => (
+                  {user?.skills?.map((skill) => (
                     <Badge key={skill} variant="secondary" className="gradient-accent text-slate-700 border-0 transition-smooth hover:scale-105">
                       {skill}
                     </Badge>
@@ -261,7 +287,7 @@ export default function StudentProfile() {
                   <div className="space-y-4">
                     <div className="flex items-start gap-4">
                       <Avatar className="w-10 h-10">
-                        <AvatarImage src={mockProfile.profilePic} alt={mockProfile.name} />
+                        <AvatarImage src={user?.profilePicture || '/default-avatar.png'} alt={user?.fullname || 'User'} />
                         <AvatarFallback>JD</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
@@ -332,12 +358,12 @@ export default function StudentProfile() {
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
                       <Avatar className="w-10 h-10">
-                        <AvatarImage src={mockProfile.profilePic} alt={mockProfile.name} />
+                        <AvatarImage src={user?.profilePicture || '/default-avatar.png'} alt={user?.fullname || 'User'} />
                         <AvatarFallback>JD</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                          <h4 className="font-semibold text-slate-800">{mockProfile.name}</h4>
+                          <h4 className="font-semibold text-slate-800">{user?.fullname || 'User'}</h4>
                           <span className="text-slate-500 text-sm">• {post.timestamp}</span>
                         </div>
                         <p className="text-slate-700 mb-4 leading-relaxed">{post.description}</p>
@@ -386,6 +412,13 @@ export default function StudentProfile() {
           </div>
         </div>
       </div>
+
+      {/* Edit Profile Form */}
+      <EditProfileForm 
+        isOpen={showEditProfile}
+        onOpenChange={setShowEditProfile}
+        onSave={handleSaveProfile}
+      />
     </div>
   );
 }

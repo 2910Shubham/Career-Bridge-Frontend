@@ -2,15 +2,18 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, TrendingUp, Users, MapPin, LogIn, UserPlus, Award, Briefcase } from "lucide-react";
+import { Search, Plus, TrendingUp, Users, MapPin, LogIn, UserPlus, Award, Briefcase, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-image.jpg";
+import { getStoredUser } from "@/lib/auth";
 
 interface User {
-  fullName?: string;
-  email?: string;
-  role?: string;
-  avatarUrl?: string;
+  userId: string;
+  fullname: string;
+  username: string;
+  email: string;
+  role: string;
+  isVerified: boolean;
 }
 
 const HeroSection = () => {
@@ -18,11 +21,12 @@ const HeroSection = () => {
   const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem('user');
-    setUser(stored ? JSON.parse(stored) : null);
+    const storedUser = getStoredUser();
+    setUser(storedUser);
+    
     const onStorage = () => {
-      const updated = localStorage.getItem('user');
-      setUser(updated ? JSON.parse(updated) : null);
+      const updatedUser = getStoredUser();
+      setUser(updatedUser);
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
@@ -136,14 +140,20 @@ const HeroSection = () => {
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              {user.role === 'student' && (
+              <Link to="/profile">
                 <Button size="lg" className="bg-primary text-white hover:bg-primary/90">
+                  <User className="h-5 w-5 mr-2" />
+                  My Profile
+                </Button>
+              </Link>
+              {user.role === 'student' && (
+                <Button size="lg" className="bg-secondary text-white hover:bg-secondary/90">
                   <Award className="h-5 w-5 mr-2" />
                   Post New Achievement
                 </Button>
               )}
               {user.role === 'recruiter' && (
-                <Button size="lg" className="bg-primary text-white hover:bg-primary/90">
+                <Button size="lg" className="bg-secondary text-white hover:bg-secondary/90">
                   <Briefcase className="h-5 w-5 mr-2" />
                   Post New Job
                 </Button>

@@ -11,6 +11,7 @@ import RegisterForm from "./components/RegisterForm.tsx";
 import VerifyPage from "./components/VerifyPage.tsx";
 import StudentProfile from "./pages/StudentProfile";
 import RecruiterProfile from "./pages/RecruiterProfile";
+import ProtectedRoute from "./components/ProtectedRoute.tsx";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,11 @@ const App = () => (
             <Route path="/login" element={<LoginForm />} />
             <Route path="/register" element={<RegisterForm />} />
             <Route path="/verify/:token" element={<VerifyPage />} />
+            
+            {/* Protected Routes - will redirect to appropriate profile based on user role */}
+            <Route path="/profile" element={<ProtectedRoute><div /></ProtectedRoute>} />
+            
+            {/* Direct Profile Routes */}
             <Route path="/student-profile" element={<StudentProfile />} />
             <Route path="/recruiter-profile" element={<RecruiterProfile />} />
 

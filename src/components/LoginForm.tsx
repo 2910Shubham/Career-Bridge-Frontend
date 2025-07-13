@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, LogIn, Home } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { storeUserData, getCookies } from '@/lib/auth';
 
 interface FormData {
   email: string;
@@ -52,10 +53,25 @@ const LoginForm: React.FC = () => {
         if (!response.ok) {
           setErrors({ api: data.message || 'Login failed' });
         } else {
-          // Store user info in localStorage
-          localStorage.setItem('user', JSON.stringify(data.user || data));
-          // Redirect to home
-          navigate('/');
+          // Handle the new response structure
+          const userData = data.data || data.user || data;
+          
+          // Get cookies for token
+          const cookies = getCookies();
+          const token = cookies.token || cookies.authToken;
+          
+          // Store user data and token using auth utility
+          storeUserData(userData, token);
+          
+          // Redirect based on user role
+          if (userData.role === 'student') {
+            navigate('/student-profile');
+          } else if (userData.role === 'recruiter') {
+            navigate('/recruiter-profile');
+          } else {
+            // Fallback to home if role is not recognized
+            navigate('/');
+          }
         }
       } catch (error) {
         setErrors({ api: 'Network error. Please try again.' });
