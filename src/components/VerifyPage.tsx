@@ -16,7 +16,7 @@ const VerifyPage: React.FC = () => {
     
     const verify = async () => {
       try {
-        const response = await fetch(`http://localhost:3000/api/auth/verify/${token}`);
+        const response = await fetch(`/api/auth/verify/${token}`);
         const data = await response.json();
         if (response.ok && data.isVerified) {
           setStatus('success');

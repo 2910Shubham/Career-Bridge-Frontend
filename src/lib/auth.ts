@@ -25,34 +25,40 @@ export const getStoredUser = (): User | null => {
 
 // Get auth token
 export const getAuthToken = (): string | null => {
-  return localStorage.getItem('authToken');
-};
-
-// Get cookies as object
-export const getCookies = (): { [key: string]: string } => {
-  return document.cookie.split(';').reduce((acc, cookie) => {
+  const cookies = document.cookie.split(';').reduce((acc, cookie) => {
     const [key, value] = cookie.trim().split('=');
     if (key && value) {
       acc[key] = value;
     }
+    
     return acc;
   }, {} as { [key: string]: string });
+  return cookies.token || cookies.authToken || null;
 };
+
+// Get cookies as object
+export const getCookieValue = (name) => {
+  const cookies = document.cookie.split('; ');
+  const cookie = cookies.find(row => row.startsWith(name + '='));
+  return cookie ? cookie.split('=')[1] : null;
+};
+
 
 // Verify user authentication with backend
 export const verifyUserAuth = async (): Promise<User | null> => {
   try {
-    const token = getAuthToken();
-    const cookies = getCookies();
+    // const token = getAuthToken();
+    const token = getCookieValue("token");
+    console.log(getCookieValue('token'));
     
     // Use token from localStorage or cookies
-    const authToken = token || cookies.token || cookies.authToken;
+    const authToken = token 
     
     if (!authToken) {
       return null;
     }
 
-    const response = await fetch('http://localhost:3000/api/auth/verify', {
+    const response = await fetch('/api/auth/verify', {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${authToken}`,

@@ -60,7 +60,7 @@ const RegisterForm: React.FC = () => {
     if (Object.keys(newErrors).length === 0) {
       setIsSubmitting(true);
       try {
-        const response = await fetch('http://localhost:3000/api/auth/register', {
+        const response = await fetch('/api/auth/register', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -97,7 +97,7 @@ const RegisterForm: React.FC = () => {
     setResendStatus('loading');
     setResendMessage('');
     try {
-      const response = await fetch('http://localhost:3000/api/auth/resend-verification-email', {
+      const response = await fetch('/api/auth/resend-verification-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

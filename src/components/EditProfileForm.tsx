@@ -29,9 +29,10 @@ import {
   Users,
   DollarSign,
   Clock,
-  ExternalLink
+  ExternalLink,
+  Cookie
 } from "lucide-react";
-import { getStoredUser } from '@/lib/auth';
+import { getAuthToken, getStoredUser } from '@/lib/auth';
 
 interface User {
   userId: string;
@@ -116,11 +117,28 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({ isOpen, onOpenChange,
   const [showAchievementForm, setShowAchievementForm] = useState(false);
   const [showEducationForm, setShowEducationForm] = useState(false);
   const [showExperienceForm, setShowExperienceForm] = useState(false);
+  const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       const storedUser = getStoredUser();
+      const token = getAuthToken()
+      const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+        const [key, value] = cookie.trim().split('=');
+        if (key && value) {
+          acc[key] = value;
+        }
+        return acc;
+      }, {} as { [key: string]: string });
+      
+      console.log('EditProfileForm opened with:', {
+        storedUser,
+        token: token,
+        cookies: Object.keys(cookies)
+      });
+      
       setUser(storedUser);
+      setProfilePicFile(null); // Reset file state when dialog opens
     }
   }, [isOpen]);
 
@@ -203,12 +221,54 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({ isOpen, onOpenChange,
     if (!user) return;
     setLoading(true);
     try {
-      // Here you would typically make an API call to update the user profile
-      // For now, we'll just call the onSave callback
-      onSave(user);
+      const token = localStorage.getItem('authToken');
+      let response;
+
+      if (profilePicFile) {
+        // Use FormData for file upload
+        const formData = new FormData();
+        formData.append('profilePicture', profilePicFile);
+        formData.append('user', JSON.stringify(user)); // send other fields as JSON string
+
+        response = await fetch('/api/users/profile', {
+          method: "PUT",
+          headers: {
+            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+            // Do NOT set Content-Type, browser will set it to multipart/form-data
+          },
+          credentials: "include",
+          body: formData,
+        });
+      } else {
+        // Fallback to JSON if no file
+        response = await fetch('/api/users/profile', {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+          },
+          credentials: "include",
+          body: JSON.stringify(user),
+        });
+      }
+
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error('Error response:', errorData);
+        throw new Error(`Failed to update profile: ${response.status} ${response.statusText}`);
+      }
+      
+      const updatedUser = await response.json();
+      console.log('Profile updated successfully:', updatedUser);
+      onSave(updatedUser);
       onOpenChange(false);
+      setProfilePicFile(null); // Reset file state after save
     } catch (error) {
-      console.error('Error saving profile:', error);
+      console.error("Error saving profile:", error);
+      // Optionally show an error toast/message here
     } finally {
       setLoading(false);
     }
@@ -218,7 +278,7 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({ isOpen, onOpenChange,
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent aria-describedby={undefined} className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <User className="w-5 h-5" />
@@ -252,10 +312,26 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({ isOpen, onOpenChange,
                   <div className="flex-1">
                     <Label htmlFor="profilePicture">Profile Picture</Label>
                     <div className="flex gap-2 mt-2">
-                      <Button variant="outline" size="sm">
-                        <Upload className="w-4 h-4 mr-2" />
-                        Upload
-                      </Button>
+                      <input
+                        type="file"
+                        id="profilePicInput"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            setProfilePicFile(e.target.files[0]);
+                            setUser({ ...user, profilePicture: URL.createObjectURL(e.target.files[0]) });
+                          }
+                        }}
+                      />
+                      <label htmlFor="profilePicInput">
+                        <Button asChild variant="outline" size="sm">
+                          <span>
+                            <Upload className="w-4 h-4 mr-2" />
+                            Upload
+                          </span>
+                        </Button>
+                      </label>
                       <Button variant="outline" size="sm">
                         <Globe className="w-4 h-4 mr-2" />
                         URL
@@ -745,7 +821,7 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({ isOpen, onOpenChange,
 
         {/* Add Achievement Dialog */}
         <Dialog open={showAchievementForm} onOpenChange={setShowAchievementForm}>
-          <DialogContent>
+          <DialogContent aria-describedby={undefined}>
             <DialogHeader>
               <DialogTitle>Add Achievement</DialogTitle>
             </DialogHeader>
@@ -798,7 +874,7 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({ isOpen, onOpenChange,
 
         {/* Add Education Dialog */}
         <Dialog open={showEducationForm} onOpenChange={setShowEducationForm}>
-          <DialogContent>
+          <DialogContent aria-describedby={undefined}>
             <DialogHeader>
               <DialogTitle>Add Education</DialogTitle>
             </DialogHeader>
@@ -883,7 +959,7 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({ isOpen, onOpenChange,
 
         {/* Add Experience Dialog */}
         <Dialog open={showExperienceForm} onOpenChange={setShowExperienceForm}>
-          <DialogContent>
+          <DialogContent aria-describedby={undefined}>
             <DialogHeader>
               <DialogTitle>Add Experience</DialogTitle>
             </DialogHeader>

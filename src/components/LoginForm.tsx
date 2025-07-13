@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, LogIn, Home } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { storeUserData, getCookies } from '@/lib/auth';
+import { storeUserData, getCookieValue } from '@/lib/auth';
 
 interface FormData {
   email: string;
@@ -42,14 +42,22 @@ const LoginForm: React.FC = () => {
     if (Object.keys(newErrors).length === 0) {
       setIsSubmitting(true);
       try {
-        const response = await fetch('http://localhost:3000/api/auth/login', {
+        console.log('Attempting login with:', formData);
+        
+        const response = await fetch('/api/auth/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
+          credentials: 'include', // This is crucial for cookies to be sent/received
           body: JSON.stringify(formData),
         });
+        
+        console.log('Login response status:', response.status);
+        console.log('Login response headers:', Object.fromEntries(response.headers.entries()));
+        
         const data = await response.json();
+        console.log('Login response data:', data);
         if (!response.ok) {
           setErrors({ api: data.message || 'Login failed' });
         } else {
@@ -57,11 +65,19 @@ const LoginForm: React.FC = () => {
           const userData = data.data || data.user || data;
           
           // Get cookies for token
-          const cookies = getCookies();
-          const token = cookies.token || cookies.authToken;
+          // const cookies = getCookieValue();
+          const token = getCookieValue("token") || null;
+          
+          // console.log('Cookies after login:', token);
+          console.log('Token found:', token);
+          console.log('User data to store:', userData);
+          
+          // Check if token is in response data
+          const responseToken = data.token || data.accessToken || data.authToken;
+          console.log('Token from response:', responseToken);
           
           // Store user data and token using auth utility
-          storeUserData(userData, token);
+          storeUserData(userData, responseToken || token);
           
           // Redirect based on user role
           if (userData.role === 'student') {

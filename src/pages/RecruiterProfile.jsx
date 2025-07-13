@@ -13,7 +13,8 @@ import { Plus, MapPin, Calendar, Award, Briefcase, Heart, MessageCircle, Share2,
 import Navbar from "@/components/Navbar";
 import JobPostForm from "@/components/JobPostForm";
 import EditProfileForm from "@/components/EditProfileForm";
-import { getStoredUser } from '@/lib/auth';
+import { getStoredUser, verifyUserAuth } from '@/lib/auth';
+import { Navigate } from 'react-router-dom';
 
 const mockProfile = {
   name: "Sarah Johnson",
@@ -145,15 +146,31 @@ export default function RecruiterProfile() {
   });
   const [newSkill, setNewSkill] = useState("");
   const [user, setUser] = useState(null);
+  const [fullProfile, setFullProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = getStoredUser();
-    setUser(storedUser);
-    if (storedUser) {
-      setAchievements(storedUser.achievements || []);
-      setPosts(storedUser.posts || []);
-      setJobPosts(storedUser.recruiterInfo?.jobPosts || []);
-    }
+    const fetchProfile = async () => {
+      setLoading(true);
+      let authUser = await verifyUserAuth();
+      if (!authUser) authUser = getStoredUser();
+      setUser(authUser);
+
+      if (authUser && authUser.userId) {
+        const res = await fetch(`/api/users/${authUser.userId}`, {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setFullProfile(data);
+          setAchievements(data.achievements || []);
+          setPosts(data.posts || []);
+          setJobPosts(data.recruiterInfo?.jobPosts || []);
+        }
+      }
+      setLoading(false);
+    };
+    fetchProfile();
   }, []);
 
   const handleAddAchievement = () => {
@@ -245,6 +262,29 @@ export default function RecruiterProfile() {
     setShowEditProfile(false);
   };
 
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  // Redirect to login if no user is found
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Redirect to appropriate profile if user role doesn't match
+  if (user.role !== 'recruiter') {
+    if (user.role === 'student') {
+      return <Navigate to="/student-profile" replace />;
+    } else {
+      return <Navigate to="/login" replace />;
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 w-full">
       <Navbar />
@@ -273,8 +313,8 @@ export default function RecruiterProfile() {
           <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
             <div className="relative">
               <Avatar className="w-32 h-32 border-4 border-white/20 shadow-card">
-                <AvatarImage src={user?.profilePicture || '/default-avatar.png'} alt={user?.fullname || 'User'} />
-                <AvatarFallback className="text-2xl bg-white/20">{user?.fullname ? user.fullname.split(' ').map(n => n[0]).join('') : 'U'}</AvatarFallback>
+                <AvatarImage src={fullProfile?.profilePicture || '/default-avatar.png'} alt={fullProfile?.fullname || 'User'} />
+                <AvatarFallback className="text-2xl bg-white/20">{fullProfile?.fullname ? fullProfile.fullname.split(' ').map(n => n[0]).join('') : 'U'}</AvatarFallback>
               </Avatar>
               <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-400 rounded-full border-4 border-white flex items-center justify-center">
                 <div className="w-3 h-3 bg-white rounded-full"></div>
@@ -282,7 +322,7 @@ export default function RecruiterProfile() {
             </div>
             <div className="flex-1 text-center md:text-left">
               <div className="flex items-center gap-4 mb-2">
-                <h1 className="text-4xl font-bold">{user?.fullname || 'User'}</h1>
+                <h1 className="text-4xl font-bold">{fullProfile?.fullname || 'User'}</h1>
                 <Button 
                   onClick={() => setShowEditProfile(true)}
                   size="sm"
@@ -292,15 +332,15 @@ export default function RecruiterProfile() {
                   Edit Profile
                 </Button>
               </div>
-              <p className="text-xl text-white/90 mb-4">{user?.bio}</p>
+              <p className="text-xl text-white/90 mb-4">{fullProfile?.bio}</p>
               <div className="flex flex-wrap gap-4 justify-center md:justify-start text-sm">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4" />
-                  <span>{user?.location}</span>
+                  <span>{fullProfile?.location}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Building className="w-4 h-4" />
-                  <span>{user?.recruiterInfo?.companyName} • {user?.recruiterInfo?.designation}</span>
+                  <span>{fullProfile?.recruiterInfo?.companyName} • {fullProfile?.recruiterInfo?.designation}</span>
                 </div>
               </div>
             </div>
@@ -427,7 +467,7 @@ export default function RecruiterProfile() {
                       <div className="space-y-4">
                         <div className="flex items-start gap-4">
                           <Avatar className="w-10 h-10">
-                            <AvatarImage src={user?.profilePicture || '/default-avatar.png'} alt={user?.fullname || 'User'} />
+                            <AvatarImage src={fullProfile?.profilePicture || '/default-avatar.png'} alt={fullProfile?.fullname || 'User'} />
                             <AvatarFallback>SJ</AvatarFallback>
                           </Avatar>
                           <div className="flex-1">
@@ -513,12 +553,12 @@ export default function RecruiterProfile() {
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
                         <Avatar className="w-10 h-10">
-                          <AvatarImage src={user?.profilePicture || '/default-avatar.png'} alt={user?.fullname || 'User'} />
+                          <AvatarImage src={fullProfile?.profilePicture || '/default-avatar.png'} alt={fullProfile?.fullname || 'User'} />
                           <AvatarFallback>SJ</AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <h4 className="font-semibold text-slate-800">{user?.fullname || 'User'}</h4>
+                            <h4 className="font-semibold text-slate-800">{fullProfile?.fullname || 'User'}</h4>
                             <span className="text-slate-500 text-sm">• {post.timestamp}</span>
                           </div>
                           <p className="text-slate-700 mb-4 leading-relaxed">{post.description}</p>
