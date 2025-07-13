@@ -30,9 +30,11 @@ import {
   DollarSign,
   Clock,
   ExternalLink,
-  Cookie
+  Cookie,
+  CloudCog
 } from "lucide-react";
-import { getAuthToken, getStoredUser } from '@/lib/auth';
+import { useAuth } from '@/contexts/AuthContext';
+
 
 interface User {
   userId: string;
@@ -49,10 +51,11 @@ interface User {
   gender?: string;
   skills?: string[];
   achievements?: Array<{
-    title: string;
-    description: string;
-    category: string;
-    icon: string;
+    title?: string;
+    description?: string;
+    category?: string;
+    icon?: string;
+    date?: string;
   }>;
   education?: Array<{
     degree: string;
@@ -108,6 +111,7 @@ interface EditProfileFormProps {
 }
 
 const EditProfileForm: React.FC<EditProfileFormProps> = ({ isOpen, onOpenChange, onSave }) => {
+  const { user: contextUser, refreshUser } = useAuth();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [newSkill, setNewSkill] = useState('');
@@ -120,26 +124,11 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({ isOpen, onOpenChange,
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      const storedUser = getStoredUser();
-      const token = getAuthToken()
-      const cookies = document.cookie.split(';').reduce((acc, cookie) => {
-        const [key, value] = cookie.trim().split('=');
-        if (key && value) {
-          acc[key] = value;
-        }
-        return acc;
-      }, {} as { [key: string]: string });
-      
-      console.log('EditProfileForm opened with:', {
-        storedUser,
-        token: token,
-        cookies: Object.keys(cookies)
-      });
-      
-      setUser(storedUser);
+    if (isOpen && user === null) {
+      setUser(contextUser);
       setProfilePicFile(null); // Reset file state when dialog opens
     }
+    // eslint-disable-next-line
   }, [isOpen]);
 
   const handleInputChange = (field: string, value: any) => {
@@ -221,7 +210,6 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({ isOpen, onOpenChange,
     if (!user) return;
     setLoading(true);
     try {
-      const token = localStorage.getItem('authToken');
       let response;
 
       if (profilePicFile) {
@@ -230,12 +218,13 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({ isOpen, onOpenChange,
         formData.append('profilePicture', profilePicFile);
         formData.append('user', JSON.stringify(user)); // send other fields as JSON string
 
+        // Debug: print all FormData entries
+        for (let pair of formData.entries()) {
+          console.log('FormData:', pair[0], pair[1]);
+        }
+
         response = await fetch('/api/users/profile', {
           method: "PUT",
-          headers: {
-            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
-            // Do NOT set Content-Type, browser will set it to multipart/form-data
-          },
           credentials: "include",
           body: formData,
         });
@@ -243,10 +232,6 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({ isOpen, onOpenChange,
         // Fallback to JSON if no file
         response = await fetch('/api/users/profile', {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
-          },
           credentials: "include",
           body: JSON.stringify(user),
         });
@@ -261,10 +246,10 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({ isOpen, onOpenChange,
         throw new Error(`Failed to update profile: ${response.status} ${response.statusText}`);
       }
       
-      const updatedUser = await response.json();
-      console.log('Profile updated successfully:', updatedUser);
-      onSave(updatedUser);
+      await refreshUser(); // Refresh user info from backend
+      onSave(user);
       onOpenChange(false);
+      
       setProfilePicFile(null); // Reset file state after save
     } catch (error) {
       console.error("Error saving profile:", error);
@@ -273,7 +258,6 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({ isOpen, onOpenChange,
       setLoading(false);
     }
   };
-
   if (!user) return null;
 
   return (

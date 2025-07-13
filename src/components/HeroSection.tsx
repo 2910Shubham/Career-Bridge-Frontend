@@ -1,36 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, Plus, TrendingUp, Users, MapPin, LogIn, UserPlus, Award, Briefcase, User } from "lucide-react";
 import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-image.jpg";
-import { getStoredUser } from "@/lib/auth";
-
-interface User {
-  userId: string;
-  fullname: string;
-  username: string;
-  email: string;
-  role: string;
-  isVerified: boolean;
-}
+import { useAuth } from '@/contexts/AuthContext';
 
 const HeroSection = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [user, setUser] = useState<User | null>(null);
+  const { user } = useAuth();
 
-  useEffect(() => {
-    const storedUser = getStoredUser();
-    setUser(storedUser);
-    
-    const onStorage = () => {
-      const updatedUser = getStoredUser();
-      setUser(updatedUser);
-    };
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, []);
+  const getProfileRoute = () => {
+    if (!user) return '/profile';
+    if (user.role === 'student') return '/student-profile';
+    if (user.role === 'recruiter') return '/recruiter-profile';
+    return '/profile';
+  };
 
   const slidingAds = [
     "🎉 30+ people hired today!",
@@ -140,7 +126,7 @@ const HeroSection = () => {
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <Link to="/profile">
+              <Link to={getProfileRoute()}>
                 <Button size="lg" className="bg-primary text-white hover:bg-primary/90">
                   <User className="h-5 w-5 mr-2" />
                   My Profile

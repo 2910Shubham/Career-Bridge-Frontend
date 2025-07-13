@@ -7,98 +7,35 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, MapPin, Calendar, Award, Code, Heart, MessageCircle, Share2, Edit3, Image, X, Settings } from "lucide-react";
+import { Plus, MapPin, Calendar, Award, Code, Heart, MessageCircle, Share2, Edit3, Image, X, Settings, GraduationCap, Briefcase, Globe, Users, Eye, PenBox } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import EditProfileForm from "@/components/EditProfileForm";
-import { getStoredUser, verifyUserAuth } from '@/lib/auth';
 import { Navigate } from 'react-router-dom';
-
-const mockProfile = {
-  name: "Jane Doe",
-  profilePic: "https://randomuser.me/api/portraits/women/44.jpg",
-  bio: "Aspiring software engineer passionate about AI and web development. Always learning, always growing. 🚀",
-  location: "San Francisco, CA",
-  university: "Stanford University",
-  year: "Junior",
-  skills: ["JavaScript", "React", "Python", "Machine Learning", "Node.js", "TypeScript"],
-  achievements: [
-    "🏆 Winner, Hackathon 2024",
-    "🎓 Dean's List 2023",
-    "💡 Published Research Paper on AI Ethics",
-    "🌟 Google Summer of Code Participant"
-  ],
-  posts: [
-    {
-      id: 1,
-      description: "Just completed a project on sentiment analysis using Python! The model achieved 94% accuracy on the test dataset. Excited to dive deeper into NLP! 🤖",
-      timestamp: "2 hours ago",
-      likes: 42,
-      comments: 8,
-      images: ["https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&h=400&fit=crop"]
-    },
-    {
-      id: 2,
-      description: "Excited to start my internship at TechCorp! Ready to apply everything I've learned and contribute to real-world projects. Here we go! 🚀",
-      timestamp: "1 day ago",
-      likes: 87,
-      comments: 15,
-      images: []
-    },
-    {
-      id: 3,
-      description: "Attended an amazing workshop on React Server Components today. The future of web development looks incredible! 💻",
-      timestamp: "3 days ago",
-      likes: 23,
-      comments: 5,
-      images: ["https://images.unsplash.com/photo-1517180102446-f3ece451e9d8?w=600&h=400&fit=crop", "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&h=400&fit=crop"]
-    }
-  ],
-};
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function StudentProfile() {
+  const { user } = useAuth();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showNewPostDialog, setShowNewPostDialog] = useState(false);
   const [showEditProfile, setShowEditProfile] = useState(false);
-  const [achievements, setAchievements] = useState([]);
-  const [newAchievement, setNewAchievement] = useState("");
   const [likedPosts, setLikedPosts] = useState(new Set());
   const [posts, setPosts] = useState([]);
   const [newPost, setNewPost] = useState({ description: "", images: [] });
   const [previewImages, setPreviewImages] = useState([]);
-  const [user, setUser] = useState(null);
-  const [fullProfile, setFullProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      setLoading(true);
-      let authUser = await verifyUserAuth();
-      if (!authUser) authUser = getStoredUser();
-      setUser(authUser);
-
-      if (authUser && authUser.userId) {
-        const res = await fetch(`/api/users/${authUser.userId}`, {
-          credentials: "include",
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setFullProfile(data);
-          setAchievements(data.achievements || []);
-          setPosts(data.posts || []);
-        }
+    setLoading(true);
+    if (user) {
+      // If we have posts data, set it
+      if (user.posts && Array.isArray(user.posts)) {
+        setPosts(user.posts);
       }
       setLoading(false);
-    };
-    fetchProfile();
-  }, []);
-
-  const handleAddAchievement = () => {
-    if (newAchievement.trim()) {
-      setAchievements([...achievements, newAchievement.trim()]);
-      setNewAchievement("");
-      setShowAddDialog(false);
+    } else {
+      setLoading(false);
     }
-  };
+  }, [user]);
 
   const handleLike = (postId) => {
     setLikedPosts(prev => {
@@ -110,6 +47,11 @@ export default function StudentProfile() {
       }
       return newSet;
     });
+    setPosts(prev => prev.map(post => 
+      post.id === postId || post._id === postId
+        ? { ...post, likes: (post.likes || 0) + (likedPosts.has(postId) ? -1 : 1) }
+        : post
+    ));
   };
 
   const handleImageUpload = (e) => {
@@ -145,13 +87,38 @@ export default function StudentProfile() {
   };
 
   const handleSaveProfile = (updatedUser) => {
-    // Here you would typically make an API call to update the user profile
-    console.log('Profile updated:', updatedUser);
-    // For now, we'll just close the dialog
+    // Update user in context
+    // login(updatedUser, null); // null token means don't update token
     setShowEditProfile(false);
   };
 
-  // Show loading spinner while checking authentication
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Not specified';
+    try {
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (error) {
+      return 'Invalid date';
+    }
+  };
+
+  const getProfileImage = () => {
+    if (user?.profilePicture && !user.profilePicture.includes('deafult.png')) {
+      return user.profilePicture;
+    }
+    return '/default-avatar.png';
+  };
+
+  const getUserInitials = () => {
+    if (user?.fullname) {
+      return user.fullname.split(' ').map(n => n[0]).join('').toUpperCase();
+    }
+    return 'U';
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -160,12 +127,10 @@ export default function StudentProfile() {
     );
   }
 
-  // Redirect to login if no user is found
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  // Redirect to appropriate profile if user role doesn't match
   if (user.role !== 'student') {
     if (user.role === 'recruiter') {
       return <Navigate to="/recruiter-profile" replace />;
@@ -202,39 +167,53 @@ export default function StudentProfile() {
           <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
             <div className="relative">
               <Avatar className="w-32 h-32 border-4 border-white/20 shadow-card">
-                <AvatarImage src={fullProfile?.profilePicture || '/default-avatar.png'} alt={fullProfile?.fullname || 'User'} />
-                <AvatarFallback className="text-2xl bg-white/20">{fullProfile?.fullname ? fullProfile.fullname.split(' ').map(n => n[0]).join('') : 'U'}</AvatarFallback>
+                <AvatarImage src={getProfileImage()} alt={user?.fullname || 'User'} />
+                <AvatarFallback className="text-2xl bg-white/20">{getUserInitials()}</AvatarFallback>
               </Avatar>
               <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-400 rounded-full border-4 border-white flex items-center justify-center">
                 <div className="w-3 h-3 bg-white rounded-full"></div>
               </div>
             </div>
-            
-            <div className="flex-1 text-center md:text-left">
-                              <div className="flex items-center gap-4 mb-2">
-                  <h1 className="text-4xl font-bold">{fullProfile?.fullname || 'User'}</h1>
-                  <Button 
-                    onClick={() => setShowEditProfile(true)}
-                    size="sm"
-                    className="transition-smooth hover:scale-105"
-                  >
-                    <Settings className="w-4 h-4 mr-2" />
-                    Edit Profile
-                  </Button>
+            <div className="flex-1 flex flex-col items-center justify-center relative">
+              <h1 className="text-4xl font-bold text-center w-full">{user?.fullname || 'User'}</h1>
+              {/* Edit Profile button absolutely positioned at bottom right of header */}
+              <Button 
+                onClick={() => setShowEditProfile(true)}
+                size="sm"
+                className="transition-smooth hover:scale-105 absolute right-0 bottom-0 md:bottom-4 md:right-4"
+                style={{zIndex: 20}}
+              >
+                <PenBox className="w-4 h-4 mr-2" />
+              </Button>
+              <div className="flex flex-wrap gap-4 justify-center md:justify-center text-sm mb-2 mt-4">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">@{user?.username || 'username'}</span>
                 </div>
-              <p className="text-xl text-white/90 mb-4">{fullProfile?.bio}</p>
-              <div className="flex flex-wrap gap-4 justify-center md:justify-start text-sm">
+                <div className="flex items-center gap-2">
+                  <span>{user?.email || 'No email'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>{user?.phoneNumber || 'No phone'}</span>
+                </div>
+              </div>
+              <p className="text-xl text-white/90 mb-4 text-center">{user?.bio || 'No bio available'}</p>
+              <div className="flex flex-wrap gap-4 justify-center md:justify-center text-sm">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4" />
-                  <span>{fullProfile?.location}</span>
+                  <span>{user?.location || 'No location'}</span>
                 </div>
+                {user?.dateOfBirth && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    <span>Born: {formatDate(user.dateOfBirth)}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  <span>{fullProfile?.studentInfo?.university} • {fullProfile?.studentInfo?.currentYear}</span>
+                  <Eye className="w-4 h-4" />
+                  <span>{user?.profileViews?.length ?? 0} profile views</span>
                 </div>
               </div>
             </div>
-            
           </div>
         </div>
 
@@ -251,11 +230,15 @@ export default function StudentProfile() {
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {fullProfile?.skills?.map((skill) => (
-                    <Badge key={skill} variant="secondary" className="gradient-accent text-slate-700 border-0 transition-smooth hover:scale-105">
-                      {skill}
-                    </Badge>
-                  ))}
+                  {user?.skills?.length > 0 ? (
+                    user.skills.map((skill, index) => (
+                      <Badge key={index} variant="secondary" className="gradient-accent text-slate-700 border-0 transition-smooth hover:scale-105">
+                        {skill}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-slate-400">No skills added yet.</span>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -263,54 +246,189 @@ export default function StudentProfile() {
             {/* Achievements Section */}
             <Card className="shadow-card transition-smooth hover:shadow-elegant">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Award className="w-5 h-5 text-slate-600" />
-                    <h3 className="font-semibold text-lg">Achievements</h3>
-                  </div>
-                  <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-                    <DialogTrigger asChild>
-                      <Button size="sm" variant="outline" className="transition-smooth hover:scale-105">
-                        <Plus className="w-4 h-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Add Achievement</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <Input
-                          placeholder="Enter your achievement..."
-                          value={newAchievement}
-                          onChange={(e) => setNewAchievement(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && handleAddAchievement()}
-                        />
-                        <div className="flex gap-2 justify-end">
-                          <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-                            Cancel
-                          </Button>
-                          <Button onClick={handleAddAchievement}>Add Achievement</Button>
-                        </div>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
+                <div className="flex items-center gap-2">
+                  <Award className="w-5 h-5 text-slate-600" />
+                  <h3 className="font-semibold text-lg">Achievements</h3>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {achievements.map((achievement, idx) => (
-                    <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 transition-smooth hover:bg-slate-100">
-                      <div className="w-2 h-2 bg-gradient-to-r from-green-400 to-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                      <span className="text-sm text-slate-700">{achievement}</span>
-                    </div>
-                  ))}
+                  {user?.achievements?.length > 0 ? (
+                    user.achievements.map((achievement, idx) => (
+                      <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 transition-smooth hover:bg-slate-100">
+                        <div className="w-2 h-2 bg-gradient-to-r from-green-400 to-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                        <div className="flex-1">
+                          <div className="font-medium text-slate-800">{achievement.title}</div>
+                          {achievement.description && achievement.description !== 'no deacription' && (
+                            <div className="text-sm text-slate-600 mt-1">{achievement.description}</div>
+                          )}
+                          {achievement.date && (
+                            <div className="text-xs text-slate-500 mt-1">{formatDate(achievement.date)}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <span className="text-slate-400">No achievements yet.</span>
+                  )}
                 </div>
               </CardContent>
             </Card>
+
+            {/* Languages Section */}
+            {user?.studentInfo?.languages?.length > 0 ? (
+              <Card className="shadow-card transition-smooth hover:shadow-elegant">
+                <CardHeader>
+                  <Globe className="w-5 h-5 text-slate-600" />
+                  <h3 className="font-semibold text-lg">Languages</h3>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {user.studentInfo.languages.map((language, index) => (
+                      <div key={index} className="flex justify-between items-center p-2 bg-slate-50 rounded-lg">
+                        <span className="font-medium">{language.name || language}</span>
+                        {language.proficiency && <Badge variant="outline">{language.proficiency}</Badge>}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
+
+            {/* Certifications Section */}
+            {user?.studentInfo?.certifications?.length > 0 ? (
+              <Card className="shadow-card transition-smooth hover:shadow-elegant">
+                <CardHeader>
+                  <Award className="w-5 h-5 text-slate-600" />
+                  <h3 className="font-semibold text-lg">Certifications</h3>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {user.studentInfo.certifications.map((cert, index) => (
+                      <div key={index} className="p-3 border rounded-lg">
+                        <div className="font-medium text-slate-800">{cert.name || cert}</div>
+                        {cert.issuer && <div className="text-sm text-slate-600">{cert.issuer}</div>}
+                        {cert.date && (
+                          <div className="text-xs text-slate-500 mt-1">{formatDate(cert.date)}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
           </div>
 
           {/* Main Content */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-6">
+            {/* Education Section */}
+            {user?.education?.length > 0 ? (
+              <Card className="shadow-card transition-smooth hover:shadow-elegant">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="w-5 h-5 text-slate-600" />
+                    <h3 className="font-semibold text-lg">Education</h3>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {user.education.map((edu, index) => (
+                      <div key={index} className="flex items-start gap-4 p-4 border rounded-lg">
+                        <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <GraduationCap className="w-6 h-6 text-blue-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-slate-800">{edu.degree || 'No degree'}</div>
+                          <div className="text-slate-600">{edu.institution || 'No institution'}</div>
+                          <div className="text-sm text-slate-500 mt-1">
+                            {edu.startDate ? formatDate(edu.startDate) : 'No start'} - {edu.endDate ? formatDate(edu.endDate) : 'Present'}
+                          </div>
+                          {edu.grade && (
+                            <div className="text-sm text-slate-600 mt-1">Grade: {edu.grade}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
+
+            {/* Projects Section */}
+            {user?.studentInfo?.projects?.length > 0 && (
+              <Card className="shadow-card transition-smooth hover:shadow-elegant">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Code className="w-5 h-5 text-slate-600" />
+                    <h3 className="font-semibold text-lg">Projects</h3>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {user.studentInfo.projects.map((project, index) => (
+                      <div key={index} className="p-4 border rounded-lg">
+                        <div className="font-semibold text-slate-800">{project.title}</div>
+                        <div className="text-sm text-slate-600 mt-2">{project.description}</div>
+                        {project.technologies && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {project.technologies.map((tech, techIndex) => (
+                              <Badge key={techIndex} variant="secondary" className="text-xs">
+                                {tech}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                        {project.link && (
+                          <a 
+                            href={project.link} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 text-sm mt-2 inline-block"
+                          >
+                            View Project →
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Internships Section */}
+            {user?.studentInfo?.internships?.length > 0 && (
+              <Card className="shadow-card transition-smooth hover:shadow-elegant">
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <Briefcase className="w-5 h-5 text-slate-600" />
+                    <h3 className="font-semibold text-lg">Internships</h3>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {user.studentInfo.internships.map((internship, index) => (
+                      <div key={index} className="flex items-start gap-4 p-4 border rounded-lg">
+                        <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                          <Briefcase className="w-6 h-6 text-green-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-semibold text-slate-800">{internship.position}</div>
+                          <div className="text-slate-600">{internship.company}</div>
+                          <div className="text-sm text-slate-500 mt-1">
+                            {internship.startDate && formatDate(internship.startDate)} - {internship.endDate ? formatDate(internship.endDate) : 'Present'}
+                          </div>
+                          {internship.description && (
+                            <div className="text-sm text-slate-600 mt-2">{internship.description}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Posts Section */}
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-slate-800">Recent Posts</h2>
               <Dialog open={showNewPostDialog} onOpenChange={setShowNewPostDialog}>
@@ -327,8 +445,8 @@ export default function StudentProfile() {
                   <div className="space-y-4">
                     <div className="flex items-start gap-4">
                       <Avatar className="w-10 h-10">
-                        <AvatarImage src={fullProfile?.profilePicture || '/default-avatar.png'} alt={fullProfile?.fullname || 'User'} />
-                        <AvatarFallback>JD</AvatarFallback>
+                        <AvatarImage src={getProfileImage()} alt={user?.fullname || 'User'} />
+                        <AvatarFallback>{getUserInitials()}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
                         <Textarea
@@ -393,61 +511,79 @@ export default function StudentProfile() {
             </div>
 
             <div className="space-y-6">
-              {posts.map((post) => (
-                <Card key={post.id} className="shadow-card transition-smooth hover:shadow-elegant">
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <Avatar className="w-10 h-10">
-                        <AvatarImage src={fullProfile?.profilePicture || '/default-avatar.png'} alt={fullProfile?.fullname || 'User'} />
-                        <AvatarFallback>JD</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h4 className="font-semibold text-slate-800">{fullProfile?.fullname || 'User'}</h4>
-                          <span className="text-slate-500 text-sm">• {post.timestamp}</span>
-                        </div>
-                        <p className="text-slate-700 mb-4 leading-relaxed">{post.description}</p>
-                        
-                        {post.images && post.images.length > 0 && (
-                          <div className={`mb-4 ${post.images.length === 1 ? 'max-w-md' : 'grid grid-cols-2 gap-2'}`}>
-                            {post.images.map((img, index) => (
-                              <img
-                                key={index}
-                                src={img}
-                                alt={`Post image ${index + 1}`}
-                                className="w-full h-64 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                                onClick={() => window.open(img, '_blank')}
-                              />
-                            ))}
+              {posts.length > 0 ? (
+                posts.map((post) => (
+                  <Card key={post.id || post._id} className="shadow-card transition-smooth hover:shadow-elegant">
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <Avatar className="w-10 h-10">
+                          <AvatarImage src={getProfileImage()} alt={user?.fullname || 'User'} />
+                          <AvatarFallback>{getUserInitials()}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-semibold text-slate-800">{user?.fullname || 'User'}</h4>
+                            <span className="text-slate-500 text-sm">• {post.timestamp || 'Recently'}</span>
                           </div>
-                        )}
-                        
-                        <Separator className="my-4" />
-                        
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-6">
-                            <button
-                              onClick={() => handleLike(post.id)}
-                              className="flex items-center gap-2 text-slate-600 hover:text-red-500 transition-smooth"
-                            >
-                              <Heart className={`w-5 h-5 ${likedPosts.has(post.id) ? 'fill-red-500 text-red-500' : ''}`} />
-                              <span className="text-sm">{post.likes + (likedPosts.has(post.id) ? 1 : 0)}</span>
-                            </button>
-                            <button className="flex items-center gap-2 text-slate-600 hover:text-blue-500 transition-smooth">
-                              <MessageCircle className="w-5 h-5" />
-                              <span className="text-sm">{post.comments}</span>
+                          <p className="text-slate-700 mb-4 leading-relaxed">{post.description || post.content}</p>
+                          
+                          {post.images && post.images.length > 0 && (
+                            <div className={`mb-4 ${post.images.length === 1 ? 'max-w-md' : 'grid grid-cols-2 gap-2'}`}>
+                              {post.images.map((img, index) => (
+                                <img
+                                  key={index}
+                                  src={img}
+                                  alt={`Post image ${index + 1}`}
+                                  className="w-full h-64 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                                  onClick={() => window.open(img, '_blank')}
+                                />
+                              ))}
+                            </div>
+                          )}
+                          
+                          <Separator className="my-4" />
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-6">
+                              <button
+                                onClick={() => handleLike(post.id || post._id)}
+                                className="flex items-center gap-2 text-slate-600 hover:text-red-500 transition-smooth"
+                              >
+                                <Heart className={`w-5 h-5 ${likedPosts.has(post.id || post._id) ? 'fill-red-500 text-red-500' : ''}`} />
+                                <span className="text-sm">{(post.likes || 0) + (likedPosts.has(post.id || post._id) ? 1 : 0)}</span>
+                              </button>
+                              <button className="flex items-center gap-2 text-slate-600 hover:text-blue-500 transition-smooth">
+                                <MessageCircle className="w-5 h-5" />
+                                <span className="text-sm">{post.comments || 0}</span>
+                              </button>
+                            </div>
+                            <button className="flex items-center gap-2 text-slate-600 hover:text-green-500 transition-smooth">
+                              <Share2 className="w-5 h-5" />
+                              <span className="text-sm">Share</span>
                             </button>
                           </div>
-                          <button className="flex items-center gap-2 text-slate-600 hover:text-green-500 transition-smooth">
-                            <Share2 className="w-5 h-5" />
-                            <span className="text-sm">Share</span>
-                          </button>
                         </div>
                       </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <Card className="shadow-card">
+                  <CardContent className="p-8 text-center">
+                    <div className="text-slate-400 mb-4">
+                      <MessageCircle className="w-12 h-12 mx-auto mb-2" />
+                      <p>No posts yet</p>
+                      <p className="text-sm">Share your thoughts and experiences with the community!</p>
                     </div>
+                    <Button 
+                      onClick={() => setShowNewPostDialog(true)}
+                      className="gradient-hero border-0"
+                    >
+                      Create Your First Post
+                    </Button>
                   </CardContent>
                 </Card>
-              ))}
+              )}
             </div>
           </div>
         </div>

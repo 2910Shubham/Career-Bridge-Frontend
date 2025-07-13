@@ -9,121 +9,17 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, MapPin, Calendar, Award, Briefcase, Heart, MessageCircle, Share2, Edit3, Image, X, Users, TrendingUp, Eye, FileText, Building, DollarSign, Clock, Settings } from "lucide-react";
+import { Plus, MapPin, Calendar, Award, Briefcase, Heart, MessageCircle, Share2, Edit3, Image, X, Users, TrendingUp, Eye, FileText, Building, DollarSign, Clock, Settings, PenBox } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import JobPostForm from "@/components/JobPostForm";
 import EditProfileForm from "@/components/EditProfileForm";
-import { getStoredUser, verifyUserAuth } from '@/lib/auth';
+import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 
-const mockProfile = {
-  name: "Sarah Johnson",
-  profilePic: "https://randomuser.me/api/portraits/women/68.jpg",
-  bio: "Senior Tech Recruiter at InnovateTech | Connecting top talent with innovative companies | 8+ years in tech recruitment 🚀",
-  location: "New York, NY",
-  company: "InnovateTech Solutions",
-  title: "Senior Technical Recruiter",
-  skills: ["Technical Recruiting", "Talent Acquisition", "Interviewing", "Candidate Assessment", "HR Technology", "Networking"],
-  achievements: [
-    "🏆 Top Recruiter of the Year 2023",
-    "💼 Placed 150+ candidates in 2023",
-    "🌟 95% candidate satisfaction rate",
-    "📈 Reduced time-to-hire by 40%"
-  ],
-  posts: [
-    {
-      id: 1,
-      description: "Excited to announce we're hiring 5 Senior Software Engineers! Looking for passionate developers with React and Node.js experience. Remote-friendly culture! 💻",
-      timestamp: "2 hours ago",
-      likes: 28,
-      comments: 12,
-      images: ["https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600&h=400&fit=crop"]
-    },
-    {
-      id: 2,
-      description: "Just had an amazing conversation with a candidate who's transitioning from finance to tech. Love helping people find their passion! 🌟",
-      timestamp: "1 day ago",
-      likes: 45,
-      comments: 8,
-      images: []
-    }
-  ],
-  jobPosts: [
-    {
-      id: 1,
-      title: "Senior Software Engineer",
-      company: "InnovateTech Solutions",
-      location: "Remote",
-      type: "Full-time",
-      salary: "$120k - $160k",
-      applicants: 47,
-      posted: "2 days ago",
-      status: "Active"
-    },
-    {
-      id: 2,
-      title: "Product Manager",
-      company: "InnovateTech Solutions",
-      location: "New York, NY",
-      type: "Full-time",
-      salary: "$130k - $170k",
-      applicants: 23,
-      posted: "1 week ago",
-      status: "Active"
-    },
-    {
-      id: 3,
-      title: "UX Designer",
-      company: "InnovateTech Solutions",
-      location: "Hybrid",
-      type: "Full-time",
-      salary: "$90k - $120k",
-      applicants: 31,
-      posted: "3 days ago",
-      status: "Closed"
-    }
-  ],
-  stats: {
-    totalJobPosts: 12,
-    totalApplications: 287,
-    successfulHires: 23,
-    averageTimeToHire: "18 days"
-  }
-};
 
-// Add this mock applications data for the Applications tab
-const mockApplications = [
-  {
-    name: "John Smith",
-    position: "Senior Software Engineer",
-    avatar: "https://randomuser.me/api/portraits/men/45.jpg",
-    status: "Interviewing",
-    applied: "2 days ago"
-  },
-  {
-    name: "Maria Garcia",
-    position: "Product Manager",
-    avatar: "https://randomuser.me/api/portraits/women/46.jpg",
-    status: "Offer Sent",
-    applied: "1 week ago"
-  },
-  {
-    name: "Alex Chen",
-    position: "UX Designer",
-    avatar: "https://randomuser.me/api/portraits/men/47.jpg",
-    status: "Screening",
-    applied: "3 days ago"
-  },
-  {
-    name: "Sarah Wilson",
-    position: "Data Scientist",
-    avatar: "https://randomuser.me/api/portraits/women/48.jpg",
-    status: "Rejected",
-    applied: "5 days ago"
-  }
-];
 
 export default function RecruiterProfile() {
+  const { user } = useAuth();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showNewPostDialog, setShowNewPostDialog] = useState(false);
   const [showJobForm, setShowJobForm] = useState(false);
@@ -145,33 +41,17 @@ export default function RecruiterProfile() {
     skills: [],
   });
   const [newSkill, setNewSkill] = useState("");
-  const [user, setUser] = useState(null);
-  const [fullProfile, setFullProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      setLoading(true);
-      let authUser = await verifyUserAuth();
-      if (!authUser) authUser = getStoredUser();
-      setUser(authUser);
-
-      if (authUser && authUser.userId) {
-        const res = await fetch(`/api/users/${authUser.userId}`, {
-          credentials: "include",
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setFullProfile(data);
-          setAchievements(data.achievements || []);
-          setPosts(data.posts || []);
-          setJobPosts(data.recruiterInfo?.jobPosts || []);
-        }
-      }
+    setLoading(true);
+    if (user && user.recruiterInfo && user.recruiterInfo.jobPosts) {
+      setJobPosts(user.recruiterInfo.jobPosts);
       setLoading(false);
-    };
-    fetchProfile();
-  }, []);
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
 
   const handleAddAchievement = () => {
     if (newAchievement.trim()) {
@@ -256,10 +136,10 @@ export default function RecruiterProfile() {
   };
 
   const handleSaveProfile = (updatedUser) => {
-    // Here you would typically make an API call to update the user profile
-    console.log('Profile updated:', updatedUser);
-    // For now, we'll just close the dialog
+    setLoading(true);
+    // storeUserData(updatedUser); // This line is removed as per the edit hint
     setShowEditProfile(false);
+    setLoading(false);
   };
 
   // Show loading spinner while checking authentication
@@ -270,7 +150,8 @@ export default function RecruiterProfile() {
       </div>
     );
   }
-
+  
+ 
   // Redirect to login if no user is found
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -285,10 +166,12 @@ export default function RecruiterProfile() {
     }
   }
 
+  const mockApplications = [];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 w-full">
       <Navbar />
-      <style jsx global>{`
+      <style>{`
         .gradient-hero {
           background: linear-gradient(135deg, hsl(175 17% 43%), hsl(145 23% 60%));
         }
@@ -312,35 +195,49 @@ export default function RecruiterProfile() {
           <div className="absolute inset-0 bg-black/10"></div>
           <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
             <div className="relative">
-              <Avatar className="w-32 h-32 border-4 border-white/20 shadow-card">
-                <AvatarImage src={fullProfile?.profilePicture || '/default-avatar.png'} alt={fullProfile?.fullname || 'User'} />
-                <AvatarFallback className="text-2xl bg-white/20">{fullProfile?.fullname ? fullProfile.fullname.split(' ').map(n => n[0]).join('') : 'U'}</AvatarFallback>
+              <Avatar className="w-20 h-20 border-4 border-white/20 shadow-card">
+                <AvatarImage src={user?.profilePicture || '/default-avatar.png'} alt={user?.fullname || 'User'} />
+                <div className="h-4 w-4">{user?.profilePicture}</div>
               </Avatar>
               <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-400 rounded-full border-4 border-white flex items-center justify-center">
                 <div className="w-3 h-3 bg-white rounded-full"></div>
               </div>
             </div>
-            <div className="flex-1 text-center md:text-left">
-              <div className="flex items-center gap-4 mb-2">
-                <h1 className="text-4xl font-bold">{fullProfile?.fullname || 'User'}</h1>
-                <Button 
-                  onClick={() => setShowEditProfile(true)}
-                  size="sm"
-                  className="transition-smooth hover:scale-105"
-                >
-                  <Settings className="w-4 h-4 mr-2" />
-                  Edit Profile
-                </Button>
+            <div className="flex-1 flex flex-col items-center justify-center relative">
+              <h1 className="text-4xl font-bold text-center w-full">{user?.fullname || 'User'}</h1>
+              {/* Edit Profile button absolutely positioned at bottom right of header */}
+              <Button 
+                onClick={() => setShowEditProfile(true)}
+                size="sm"
+                className="transition-smooth hover:scale-105 absolute right-0 bottom-0 md:bottom-4 md:right-4"
+                style={{zIndex: 20}}
+              >
+                <PenBox className="w-2 h-4 mr-2" />
+                
+              </Button>
+              <div className="flex flex-wrap gap-4 justify-center md:justify-center text-sm mb-2 mt-4">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">@{user?.username || 'username'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>{user?.email || 'No email'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>{user?.phoneNumber || 'No phone'}</span>
+                </div>
               </div>
-              <p className="text-xl text-white/90 mb-4">{fullProfile?.bio}</p>
-              <div className="flex flex-wrap gap-4 justify-center md:justify-start text-sm">
+              <p className="text-xl text-white/90 mb-4 text-center">{user?.bio || 'No bio available'}</p>
+              <div className="flex flex-wrap gap-4 justify-center md:justify-center text-sm">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4" />
-                  <span>{fullProfile?.location}</span>
+                  <span>{user?.location || 'No location'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Building className="w-4 h-4" />
-                  <span>{fullProfile?.recruiterInfo?.companyName} • {fullProfile?.recruiterInfo?.designation}</span>
+                  <span>{user?.recruiterInfo.companyName || 'No company'} • {user?.recruiterInfo.designation || 'No designation'}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>{user?.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString() : 'No DOB'}</span>
                 </div>
               </div>
             </div>
@@ -352,28 +249,28 @@ export default function RecruiterProfile() {
           <Card className="flex-1 shadow-card transition-smooth hover:shadow-elegant">
             <CardContent className="p-6 text-center">
               <Briefcase className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-slate-800">{mockProfile.stats.totalJobPosts}</div>
+              <div className="text-2xl font-bold text-slate-800">{user?.recruiterInfo?.jobPosts?.length ?? 0}</div>
               <div className="text-sm text-slate-600">Job Posts</div>
             </CardContent>
           </Card>
           <Card className="flex-1 shadow-card transition-smooth hover:shadow-elegant">
             <CardContent className="p-6 text-center">
               <Users className="w-8 h-8 text-green-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-slate-800">{mockProfile.stats.totalApplications}</div>
+              <div className="text-2xl font-bold text-slate-800">{user?.recruiterInfo?.hiringStats?.totalApplications ?? 0}</div>
               <div className="text-sm text-slate-600">Applications</div>
             </CardContent>
           </Card>
           <Card className="flex-1 shadow-card transition-smooth hover:shadow-elegant">
             <CardContent className="p-6 text-center">
               <Award className="w-8 h-8 text-purple-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-slate-800">{mockProfile.stats.successfulHires}</div>
+              <div className="text-2xl font-bold text-slate-800">{user?.recruiterInfo?.hiringStats?.successfulHires ?? 0}</div>
               <div className="text-sm text-slate-600">Successful Hires</div>
             </CardContent>
           </Card>
           <Card className="flex-1 shadow-card transition-smooth hover:shadow-elegant">
             <CardContent className="p-6 text-center">
               <Clock className="w-8 h-8 text-orange-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-slate-800">{mockProfile.stats.averageTimeToHire}</div>
+              <div className="text-2xl font-bold text-slate-800">{user?.recruiterInfo?.hiringStats?.averageTimeToHire ?? '--'}</div>
               <div className="text-sm text-slate-600">Avg. Time to Hire</div>
             </CardContent>
           </Card>
@@ -390,55 +287,36 @@ export default function RecruiterProfile() {
               </div>
             </CardHeader>
             <CardContent className="p-4 flex flex-wrap gap-2">
-              {mockProfile.skills.map((skill) => (
-                <Badge key={skill} variant="secondary" className="gradient-accent text-slate-700 border-0 transition-smooth hover:scale-105">
-                  {skill}
-                </Badge>
-              ))}
+              {user?.skills?.length > 0 ? (
+                user.skills.map((skill, index) => (
+                  <Badge key={index} variant="secondary" className="gradient-accent text-slate-700 border-0 transition-smooth hover:scale-105">
+                    {skill}
+                  </Badge>
+                ))
+              ) : (
+                <span className="text-slate-400">No skills added yet.</span>
+              )}
             </CardContent>
           </Card>
           {/* Achievements Section */}
           <Card className="shadow-card transition-smooth hover:shadow-elegant">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Award className="w-5 h-5 text-slate-600" />
-                  <h3 className="font-semibold text-lg">Achievements</h3>
-                </div>
-                <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-                  <DialogTrigger asChild>
-                    <Button size="icon" variant="outline" className="flex items-center justify-center h-8 w-8 p-0">
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Add Achievement</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <Input
-                        placeholder="Enter your achievement..."
-                        value={newAchievement}
-                        onChange={(e) => setNewAchievement(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleAddAchievement()}
-                      />
-                      <div className="flex gap-2 justify-end">
-                        <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-                          Cancel
-                        </Button>
-                        <Button onClick={handleAddAchievement}>Add Achievement</Button>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
+              <div className="flex items-center gap-2">
+                <Award className="w-5 h-5 text-slate-600" />
+                <h3 className="font-semibold text-lg">Achievements</h3>
               </div>
             </CardHeader>
             <CardContent className="p-4 space-y-3">
-              {achievements.map((achievement, idx) => (
-                <div key={idx} className="flex items-start gap-3 p-1">
-                  <span className="text-sm text-slate-700">{achievement}</span>
-                </div>
-              ))}
+              {user?.achievements?.length > 0 ? (
+                user.achievements.map((achievement, idx) => (
+                  <div key={idx} className="flex items-start gap-3 p-1">
+                    <span className="text-sm text-slate-700">{achievement.title || achievement}</span>
+                    {achievement.description && <span className="ml-2 text-xs text-slate-500">{achievement.description}</span>}
+                  </div>
+                ))
+              ) : (
+                <span className="text-slate-400">No achievements yet.</span>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -467,7 +345,7 @@ export default function RecruiterProfile() {
                       <div className="space-y-4">
                         <div className="flex items-start gap-4">
                           <Avatar className="w-10 h-10">
-                            <AvatarImage src={fullProfile?.profilePicture || '/default-avatar.png'} alt={fullProfile?.fullname || 'User'} />
+                            <AvatarImage src={user?.profilePicture || '/default-avatar.png'} alt={user?.fullname || 'User'} />
                             <AvatarFallback>SJ</AvatarFallback>
                           </Avatar>
                           <div className="flex-1">
@@ -553,12 +431,12 @@ export default function RecruiterProfile() {
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
                         <Avatar className="w-10 h-10">
-                          <AvatarImage src={fullProfile?.profilePicture || '/default-avatar.png'} alt={fullProfile?.fullname || 'User'} />
+                          <AvatarImage src={user?.profilePicture || '/default-avatar.png'} alt={user?.fullname || 'User'} />
                           <AvatarFallback>SJ</AvatarFallback>
                         </Avatar>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <h4 className="font-semibold text-slate-800">{fullProfile?.fullname || 'User'}</h4>
+                            <h4 className="font-semibold text-slate-800">{user?.fullname || 'User'}</h4>
                             <span className="text-slate-500 text-sm">• {post.timestamp}</span>
                           </div>
                           <p className="text-slate-700 mb-4 leading-relaxed">{post.description}</p>
@@ -711,22 +589,22 @@ export default function RecruiterProfile() {
                       <li className="flex items-center gap-2">
                         <Users className="w-4 h-4 text-blue-500" />
                         <span className="text-slate-700">Total Applications:</span>
-                        <span className="font-bold">{mockProfile.stats.totalApplications}</span>
+                        <span className="font-bold">{user?.recruiterInfo?.hiringStats?.totalApplications ?? 0}</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Briefcase className="w-4 h-4 text-green-500" />
                         <span className="text-slate-700">Job Posts:</span>
-                        <span className="font-bold">{mockProfile.stats.totalJobPosts}</span>
+                        <span className="font-bold">{user?.recruiterInfo?.jobPosts?.length ?? 0}</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Award className="w-4 h-4 text-purple-500" />
                         <span className="text-slate-700">Successful Hires:</span>
-                        <span className="font-bold">{mockProfile.stats.successfulHires}</span>
+                        <span className="font-bold">{user?.recruiterInfo?.hiringStats?.successfulHires ?? 0}</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-orange-500" />
                         <span className="text-slate-700">Avg. Time to Hire:</span>
-                        <span className="font-bold">{mockProfile.stats.averageTimeToHire}</span>
+                        <span className="font-bold">{user?.recruiterInfo?.hiringStats?.averageTimeToHire ?? '--'}</span>
                       </li>
                     </ul>
                   </CardContent>
