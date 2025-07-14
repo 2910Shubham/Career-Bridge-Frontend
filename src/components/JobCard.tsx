@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MapPin, Clock, DollarSign, Heart } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface JobCardProps {
   job: {
@@ -17,27 +18,46 @@ interface JobCardProps {
     description: string;
     skills: string[];
     poster: {
+      id?: string;
       name: string;
       avatar?: string;
       role: string;
+      username?: string;
     };
   };
+  isRecruiterView?: boolean;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
-const JobCard = ({ job }: JobCardProps) => {
+const JobCard = ({ job, isRecruiterView = false, onEdit, onDelete }: JobCardProps) => {
   return (
     <Card className="group hover:shadow-elegant transition-all duration-300 border-border bg-card">
       <CardContent className="p-6">
         {/* Header with Poster Info */}
         <div className="flex items-center space-x-3 mb-4">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={job.poster.avatar} alt={job.poster.name} />
-            <AvatarFallback className="bg-primary text-primary-foreground">
-              {job.poster.name.split(' ').map(n => n[0]).join('')}
-            </AvatarFallback>
-          </Avatar>
+          {job.poster.id ? (
+            <Link to={`/recruiter-profile/${job.poster.id}`} className="focus:outline-none">
+              <Avatar className="h-10 w-10 cursor-pointer hover:opacity-80 transition-opacity">
+                <AvatarImage src={job.poster.avatar} alt={job.poster.name} />
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  {job.poster.name.split(' ').map(n => n[0]).join('')}
+                </AvatarFallback>
+              </Avatar>
+            </Link>
+          ) : (
+            <Avatar className="h-10 w-10">
+              <AvatarImage src={job.poster.avatar} alt={job.poster.name} />
+              <AvatarFallback className="bg-primary text-primary-foreground">
+                {job.poster.name.split(' ').map(n => n[0]).join('')}
+              </AvatarFallback>
+            </Avatar>
+          )}
           <div>
             <p className="font-medium text-foreground">{job.poster.name}</p>
+            {job.poster.username && (
+              <p className="text-xs text-muted-foreground">@{job.poster.username}</p>
+            )}
             <p className="text-sm text-muted-foreground">{job.poster.role}</p>
           </div>
           <div className="ml-auto">
@@ -105,15 +125,36 @@ const JobCard = ({ job }: JobCardProps) => {
 
       <CardFooter className="px-6 py-4 bg-muted/30 border-t">
         <div className="flex w-full space-x-3">
-          <Button 
-            variant="outline" 
-            className="flex-1 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-          >
-            Learn More
-          </Button>
-          <Button className="flex-1 bg-gradient-hero hover:opacity-90">
-            Apply Now
-          </Button>
+          {isRecruiterView ? (
+            <>
+              <Button 
+                variant="outline" 
+                className="flex-1 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                onClick={onEdit}
+              >
+                Edit Post
+              </Button>
+              <Button 
+                variant="destructive" 
+                className="flex-1"
+                onClick={onDelete}
+              >
+                Delete Post
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button 
+                variant="outline" 
+                className="flex-1 border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+              >
+                Learn More
+              </Button>
+              <Button className="flex-1 bg-gradient-hero hover:opacity-90">
+                Apply Now
+              </Button>
+            </>
+          )}
         </div>
       </CardFooter>
     </Card>

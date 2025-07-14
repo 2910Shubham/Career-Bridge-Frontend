@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,12 +14,15 @@ import Navbar from "@/components/Navbar";
 import JobPostForm from "@/components/JobPostForm";
 import EditProfileForm from "@/components/EditProfileForm";
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useParams } from 'react-router-dom';
+import JobCard from "@/components/JobCard";
 
 
-
-export default function RecruiterProfile() {
-  const { user } = useAuth();
+export default function RecruiterProfile({ isPublicView = false }) {
+  const { user, refreshUser } = useAuth();
+  const { id: recruiterIdParam } = useParams();
+  const [publicRecruiter, setPublicRecruiter] = useState(null);
+  const [publicLoading, setPublicLoading] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showNewPostDialog, setShowNewPostDialog] = useState(false);
   const [showJobForm, setShowJobForm] = useState(false);
@@ -42,16 +45,44 @@ export default function RecruiterProfile() {
   });
   const [newSkill, setNewSkill] = useState("");
   const [loading, setLoading] = useState(true);
+  const [jobLoading, setJobLoading] = useState(false);
+  const [jobError, setJobError] = useState("");
+  const [jobSuccess, setJobSuccess] = useState("");
+  const [editJob, setEditJob] = useState(null);
+  const [showEditJobForm, setShowEditJobForm] = useState(false);
 
   useEffect(() => {
     setLoading(true);
-    if (user && user.recruiterInfo && user.recruiterInfo.jobPosts) {
-      setJobPosts(user.recruiterInfo.jobPosts);
+    if (user && user.jobPosts) {
+      setJobPosts(user.jobPosts);
       setLoading(false);
     } else {
       setLoading(false);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (isPublicView && recruiterIdParam) {
+      setPublicLoading(true);
+      fetch(`/api/users/${recruiterIdParam}`)
+        .then(res => res.json())
+        .then(data => {
+          setPublicRecruiter(data.data || data.user || null);
+          setPublicLoading(false);
+        })
+        .catch(() => setPublicLoading(false));
+    }
+  }, [isPublicView, recruiterIdParam]);
+
+  useEffect(() => {
+    // Debug: Log /api/auth/me response
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        console.log('DEBUG /api/auth/me:', data);
+      })
+      .catch(err => console.error('DEBUG /api/auth/me error:', err));
+  }, []);
 
   const handleAddAchievement = () => {
     if (newAchievement.trim()) {
@@ -105,22 +136,42 @@ export default function RecruiterProfile() {
     }
   };
 
-  const handleCreateJob = (jobData) => {
-    const job = {
-      id: Date.now(),
-      title: jobData.jobTitle,
-      company: jobData.companyName,
-      location: jobData.jobLocation,
-      type: jobData.jobType,
-      salary: jobData.salaryRange,
-      description: jobData.jobDescription,
-      skills: jobData.skillsRequired,
-      deadline: jobData.applicationDeadline,
-      status: jobData.jobStatus,
-      applicants: 0,
-      posted: "just now",
-    };
-    setJobPosts([job, ...jobPosts]);
+  const handleCreateJob = async (jobData) => {
+    setJobLoading(true);
+    setJobError("");
+    setJobSuccess("");
+    try {
+      const response = await fetch('/api/job/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          jobTitle: jobData.jobTitle,
+          jobDescription: jobData.jobDescription,
+          jobLocation: jobData.jobLocation,
+          jobType: jobData.jobType,
+          salaryRange: jobData.salaryRange,
+          companyName: jobData.companyName,
+          companyDescription: jobData.companyDescription,
+          companyWebsite: jobData.companyWebsite,
+          skillsRequired: jobData.skillsRequired,
+          applicationDeadline: jobData.applicationDeadline,
+          jobStatus: jobData.jobStatus,
+        }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to create job post');
+      }
+      setJobSuccess('Job post created successfully!');
+      await refreshUser();
+    } catch (err) {
+      setJobError(err.message || 'Error creating job post');
+    } finally {
+      setJobLoading(false);
+    }
   };
 
   const handleAddSkill = (e) => {
@@ -142,8 +193,80 @@ export default function RecruiterProfile() {
     setLoading(false);
   };
 
-  // Show loading spinner while checking authentication
-  if (loading) {
+  // Helper to transform backend job post to JobCard format
+  const toJobCardFormat = (job) => ({
+    id: job._id,
+    title: job.jobTitle,
+    company: job.companyName,
+    companyLogo: '', // No logo in backend data
+    location: job.jobLocation,
+    salary: job.salaryRange,
+    type: job.jobType,
+    postedTime: job.createdAt ? new Date(job.createdAt).toLocaleDateString() : 'Recently',
+    description: job.jobDescription,
+    skills: job.skillsRequired || [],
+    poster: {
+      name: 'You', // Or fetch recruiter name if available
+      avatar: '',
+      role: 'Recruiter',
+    },
+  });
+
+  // Handler to delete a job post
+  const handleDeleteJob = useCallback(async (jobId) => {
+    if (!window.confirm("Are you sure you want to delete this job post?")) return;
+    try {
+      const res = await fetch(`/api/job/${jobId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to delete job post');
+      await refreshUser();
+    } catch (err) {
+      alert('Error deleting job post: ' + err.message);
+    }
+  }, [refreshUser]);
+
+  // Handler to edit a job post (stub, implement modal or navigation as needed)
+  const handleEditJob = (job) => {
+    setEditJob(job);
+    setShowEditJobForm(true);
+  };
+
+  const handleUpdateJob = async (jobData) => {
+    if (!editJob) return;
+    setJobLoading(true);
+    setJobError("");
+    setJobSuccess("");
+    try {
+      const response = await fetch(`/api/job/${editJob._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(jobData),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to update job post');
+      }
+      setJobSuccess('Job post updated successfully!');
+      setShowEditJobForm(false);
+      setEditJob(null);
+      await refreshUser();
+    } catch (err) {
+      setJobError(err.message || 'Error updating job post');
+    } finally {
+      setJobLoading(false);
+    }
+  };
+
+  // Use publicRecruiter if in public view, else use logged-in user
+  const profileUser = isPublicView && publicRecruiter ? publicRecruiter : user;
+
+  // Show loading spinner while checking authentication or fetching public profile
+  if (loading || (isPublicView && publicLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -153,13 +276,14 @@ export default function RecruiterProfile() {
   
  
   // Redirect to login if no user is found
-  if (!user) {
+  
+  if (!profileUser) {
     return <Navigate to="/login" replace />;
   }
 
   // Redirect to appropriate profile if user role doesn't match
-  if (user.role !== 'recruiter') {
-    if (user.role === 'student') {
+  if (profileUser.role !== 'recruiter') {
+    if (profileUser.role === 'student') {
       return <Navigate to="/student-profile" replace />;
     } else {
       return <Navigate to="/login" replace />;
@@ -196,15 +320,15 @@ export default function RecruiterProfile() {
           <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
             <div className="relative">
               <Avatar className="w-20 h-20 border-4 border-white/20 shadow-card">
-                <AvatarImage src={user?.profilePicture || '/default-avatar.png'} alt={user?.fullname || 'User'} />
-                <div className="h-4 w-4">{user?.profilePicture}</div>
+                <AvatarImage src={profileUser?.profilePicture || '/default-avatar.png'} alt={profileUser?.fullname || 'User'} />
+                <div className="h-4 w-4">{profileUser?.profilePicture}</div>
               </Avatar>
               <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-green-400 rounded-full border-4 border-white flex items-center justify-center">
                 <div className="w-3 h-3 bg-white rounded-full"></div>
               </div>
             </div>
             <div className="flex-1 flex flex-col items-center justify-center relative">
-              <h1 className="text-4xl font-bold text-center w-full">{user?.fullname || 'User'}</h1>
+              <h1 className="text-4xl font-bold text-center w-full">{profileUser?.fullname || 'User'}</h1>
               {/* Edit Profile button absolutely positioned at bottom right of header */}
               <Button 
                 onClick={() => setShowEditProfile(true)}
@@ -217,27 +341,27 @@ export default function RecruiterProfile() {
               </Button>
               <div className="flex flex-wrap gap-4 justify-center md:justify-center text-sm mb-2 mt-4">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold">@{user?.username || 'username'}</span>
+                  <span className="font-semibold">@{profileUser?.username || 'username'}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span>{user?.email || 'No email'}</span>
+                  <span>{profileUser?.email || 'No email'}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span>{user?.phoneNumber || 'No phone'}</span>
+                  <span>{profileUser?.phoneNumber || 'No phone'}</span>
                 </div>
               </div>
-              <p className="text-xl text-white/90 mb-4 text-center">{user?.bio || 'No bio available'}</p>
+              <p className="text-xl text-white/90 mb-4 text-center">{profileUser?.bio || 'No bio available'}</p>
               <div className="flex flex-wrap gap-4 justify-center md:justify-center text-sm">
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4" />
-                  <span>{user?.location || 'No location'}</span>
+                  <span>{profileUser?.location || 'No location'}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Building className="w-4 h-4" />
-                  <span>{user?.recruiterInfo.companyName || 'No company'} • {user?.recruiterInfo.designation || 'No designation'}</span>
+                  <span>{profileUser?.recruiterInfo.companyName || 'No company'} • {profileUser?.recruiterInfo.designation || 'No designation'}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span>{user?.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString() : 'No DOB'}</span>
+                  <span>{profileUser?.dateOfBirth ? new Date(profileUser.dateOfBirth).toLocaleDateString() : 'No DOB'}</span>
                 </div>
               </div>
             </div>
@@ -249,28 +373,28 @@ export default function RecruiterProfile() {
           <Card className="flex-1 shadow-card transition-smooth hover:shadow-elegant">
             <CardContent className="p-6 text-center">
               <Briefcase className="w-8 h-8 text-blue-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-slate-800">{user?.recruiterInfo?.jobPosts?.length ?? 0}</div>
+              <div className="text-2xl font-bold text-slate-800">{profileUser?.recruiterInfo?.jobPosts?.length ?? 0}</div>
               <div className="text-sm text-slate-600">Job Posts</div>
             </CardContent>
           </Card>
           <Card className="flex-1 shadow-card transition-smooth hover:shadow-elegant">
             <CardContent className="p-6 text-center">
               <Users className="w-8 h-8 text-green-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-slate-800">{user?.recruiterInfo?.hiringStats?.totalApplications ?? 0}</div>
+              <div className="text-2xl font-bold text-slate-800">{profileUser?.recruiterInfo?.hiringStats?.totalApplications ?? 0}</div>
               <div className="text-sm text-slate-600">Applications</div>
             </CardContent>
           </Card>
           <Card className="flex-1 shadow-card transition-smooth hover:shadow-elegant">
             <CardContent className="p-6 text-center">
               <Award className="w-8 h-8 text-purple-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-slate-800">{user?.recruiterInfo?.hiringStats?.successfulHires ?? 0}</div>
+              <div className="text-2xl font-bold text-slate-800">{profileUser?.recruiterInfo?.hiringStats?.successfulHires ?? 0}</div>
               <div className="text-sm text-slate-600">Successful Hires</div>
             </CardContent>
           </Card>
           <Card className="flex-1 shadow-card transition-smooth hover:shadow-elegant">
             <CardContent className="p-6 text-center">
               <Clock className="w-8 h-8 text-orange-500 mx-auto mb-2" />
-              <div className="text-2xl font-bold text-slate-800">{user?.recruiterInfo?.hiringStats?.averageTimeToHire ?? '--'}</div>
+              <div className="text-2xl font-bold text-slate-800">{profileUser?.recruiterInfo?.hiringStats?.averageTimeToHire ?? '--'}</div>
               <div className="text-sm text-slate-600">Avg. Time to Hire</div>
             </CardContent>
           </Card>
@@ -287,8 +411,8 @@ export default function RecruiterProfile() {
               </div>
             </CardHeader>
             <CardContent className="p-4 flex flex-wrap gap-2">
-              {user?.skills?.length > 0 ? (
-                user.skills.map((skill, index) => (
+              {profileUser?.skills?.length > 0 ? (
+                profileUser.skills.map((skill, index) => (
                   <Badge key={index} variant="secondary" className="gradient-accent text-slate-700 border-0 transition-smooth hover:scale-105">
                     {skill}
                   </Badge>
@@ -307,8 +431,8 @@ export default function RecruiterProfile() {
               </div>
             </CardHeader>
             <CardContent className="p-4 space-y-3">
-              {user?.achievements?.length > 0 ? (
-                user.achievements.map((achievement, idx) => (
+              {profileUser?.achievements?.length > 0 ? (
+                profileUser.achievements.map((achievement, idx) => (
                   <div key={idx} className="flex items-start gap-3 p-1">
                     <span className="text-sm text-slate-700">{achievement.title || achievement}</span>
                     {achievement.description && <span className="ml-2 text-xs text-slate-500">{achievement.description}</span>}
@@ -345,7 +469,7 @@ export default function RecruiterProfile() {
                       <div className="space-y-4">
                         <div className="flex items-start gap-4">
                           <Avatar className="w-10 h-10">
-                            <AvatarImage src={user?.profilePicture || '/default-avatar.png'} alt={user?.fullname || 'User'} />
+                            <AvatarImage src={profileUser?.profilePicture || '/default-avatar.png'} alt={profileUser?.fullname || 'User'} />
                             <AvatarFallback>SJ</AvatarFallback>
                           </Avatar>
                           <div className="flex-1">
@@ -425,62 +549,44 @@ export default function RecruiterProfile() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-6">
-                {posts.map((post) => (
-                  <Card key={post.id} className="shadow-card transition-smooth hover:shadow-elegant">
-                    <CardContent className="p-6">
-                      <div className="flex items-start gap-4">
-                        <Avatar className="w-10 h-10">
-                          <AvatarImage src={user?.profilePicture || '/default-avatar.png'} alt={user?.fullname || 'User'} />
-                          <AvatarFallback>SJ</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h4 className="font-semibold text-slate-800">{user?.fullname || 'User'}</h4>
-                            <span className="text-slate-500 text-sm">• {post.timestamp}</span>
-                          </div>
-                          <p className="text-slate-700 mb-4 leading-relaxed">{post.description}</p>
-                          
-                          {post.images && post.images.length > 0 && (
-                            <div className={`mb-4 ${post.images.length === 1 ? 'max-w-md' : 'grid grid-cols-2 gap-2'}`}>
-                              {post.images.map((img, index) => (
-                                <img
-                                  key={index}
-                                  src={img}
-                                  alt={`Post image ${index + 1}`}
-                                  className="w-full h-64 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                                  onClick={() => window.open(img, '_blank')}
-                                />
-                              ))}
-                            </div>
-                          )}
-                          
-                          <Separator className="my-4" />
-                          
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-6">
-                              <button
-                                onClick={() => handleLike(post.id)}
-                                className="flex items-center gap-2 text-slate-600 hover:text-red-500 transition-smooth"
-                              >
-                                <Heart className={`w-5 h-5 ${likedPosts.has(post.id) ? 'fill-red-500 text-red-500' : ''}`} />
-                                <span className="text-sm">{post.likes + (likedPosts.has(post.id) ? 1 : 0)}</span>
-                              </button>
-                              <button className="flex items-center gap-2 text-slate-600 hover:text-blue-500 transition-smooth">
-                                <MessageCircle className="w-5 h-5" />
-                                <span className="text-sm">{post.comments}</span>
-                              </button>
-                            </div>
-                            <button className="flex items-center gap-2 text-slate-600 hover:text-green-500 transition-smooth">
-                              <Share2 className="w-5 h-5" />
-                              <span className="text-sm">Share</span>
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="mt-8">
+                <h2 className="text-2xl font-bold mb-4">Recent Posts</h2>
+                <Tabs defaultValue="social" className="w-full">
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="social">Social Posts</TabsTrigger>
+                    <TabsTrigger value="jobs">Job Posts</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="social">
+                    {posts && posts.length > 0 ? (
+                      posts.map(post => (
+                        // Replace with your existing social post card component
+                        <Card key={post.id || post._id} className="mb-4">
+                          <CardContent>
+                            <div className="font-semibold">{post.description || post.content}</div>
+                            {/* Add more post details as needed */}
+                          </CardContent>
+                        </Card>
+                      ))
+                    ) : (
+                      <div className="text-gray-400">No social posts yet.</div>
+                    )}
+                  </TabsContent>
+                  <TabsContent value="jobs">
+                    {jobPosts && jobPosts.length > 0 ? (
+                      jobPosts.map(job => (
+                        <JobCard
+                          key={job._id}
+                          job={toJobCardFormat(job)}
+                          isRecruiterView={true}
+                          onEdit={() => handleEditJob(job)}
+                          onDelete={() => handleDeleteJob(job._id)}
+                        />
+                      ))
+                    ) : (
+                      <div className="text-gray-400">No job posts yet.</div>
+                    )}
+                  </TabsContent>
+                </Tabs>
               </div>
             </TabsContent>
             
@@ -490,56 +596,14 @@ export default function RecruiterProfile() {
                 {/* The JobPostForm component is now integrated into the Posts tab header */}
               </div>
 
-              <div className="space-y-4">
-                {jobPosts.map((job) => (
-                  <Card key={job.id} className="shadow-card transition-smooth hover:shadow-elegant">
-                    <CardContent className="p-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="text-xl font-semibold text-slate-800">{job.title}</h3>
-                            <Badge variant={job.status === 'Active' ? 'default' : 'secondary'}>
-                              {job.status}
-                            </Badge>
-                          </div>
-                          <p className="text-slate-600 mb-3">{job.company}</p>
-                          <div className="flex items-center gap-4 text-sm text-slate-500 mb-4">
-                            <span className="flex items-center gap-1">
-                              <MapPin className="w-4 h-4" />
-                              {job.location}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              {job.type}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <DollarSign className="w-4 h-4" />
-                              {job.salary}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-4 text-sm">
-                            <span className="flex items-center gap-1 text-blue-600">
-                              <Users className="w-4 h-4" />
-                              {job.applicants} applicants
-                            </span>
-                            <span className="text-slate-500">Posted {job.posted}</span>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
-                            <Eye className="w-4 h-4 mr-2" />
-                            View
-                          </Button>
-                          <Button variant="outline" size="sm">
-                            <Edit3 className="w-4 h-4 mr-2" />
-                            Edit
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              {jobPosts.length > 0 && (
+                <div className="space-y-6 mt-8">
+                  <h2 className="text-2xl font-bold mb-4">Your Job Posts</h2>
+                  {jobPosts.map(job => (
+                    <JobCard key={job._id} job={toJobCardFormat(job)} />
+                  ))}
+                </div>
+              )}
             </TabsContent>
             
             <TabsContent value="applications" className="space-y-6">
@@ -589,22 +653,22 @@ export default function RecruiterProfile() {
                       <li className="flex items-center gap-2">
                         <Users className="w-4 h-4 text-blue-500" />
                         <span className="text-slate-700">Total Applications:</span>
-                        <span className="font-bold">{user?.recruiterInfo?.hiringStats?.totalApplications ?? 0}</span>
+                        <span className="font-bold">{profileUser?.recruiterInfo?.hiringStats?.totalApplications ?? 0}</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Briefcase className="w-4 h-4 text-green-500" />
                         <span className="text-slate-700">Job Posts:</span>
-                        <span className="font-bold">{user?.recruiterInfo?.jobPosts?.length ?? 0}</span>
+                        <span className="font-bold">{profileUser?.recruiterInfo?.jobPosts?.length ?? 0}</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Award className="w-4 h-4 text-purple-500" />
                         <span className="text-slate-700">Successful Hires:</span>
-                        <span className="font-bold">{user?.recruiterInfo?.hiringStats?.successfulHires ?? 0}</span>
+                        <span className="font-bold">{profileUser?.recruiterInfo?.hiringStats?.successfulHires ?? 0}</span>
                       </li>
                       <li className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-orange-500" />
                         <span className="text-slate-700">Avg. Time to Hire:</span>
-                        <span className="font-bold">{user?.recruiterInfo?.hiringStats?.averageTimeToHire ?? '--'}</span>
+                        <span className="font-bold">{profileUser?.recruiterInfo?.hiringStats?.averageTimeToHire ?? '--'}</span>
                       </li>
                     </ul>
                   </CardContent>
@@ -621,12 +685,22 @@ export default function RecruiterProfile() {
         onOpenChange={setShowJobForm}
         onSubmit={handleCreateJob}
       />
+      {jobLoading && <div className="text-center text-blue-600 mt-2">Posting job...</div>}
+      {jobError && <div className="text-center text-red-600 mt-2">{jobError}</div>}
+      {jobSuccess && <div className="text-center text-green-600 mt-2">{jobSuccess}</div>}
 
       {/* Edit Profile Form */}
       <EditProfileForm 
         isOpen={showEditProfile}
         onOpenChange={setShowEditProfile}
         onSave={handleSaveProfile}
+      />
+      <JobPostForm
+        isOpen={showEditJobForm}
+        onOpenChange={setShowEditJobForm}
+        onSubmit={handleUpdateJob}
+        initialValues={editJob}
+        mode="edit"
       />
     </div>
   );

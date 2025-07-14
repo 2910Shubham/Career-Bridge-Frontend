@@ -219,9 +219,11 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({ isOpen, onOpenChange,
         formData.append('user', JSON.stringify(user)); // send other fields as JSON string
 
         // Debug: print all FormData entries
+        console.log('=== FormData Debug ===');
         for (let pair of formData.entries()) {
-          console.log('FormData:', pair[0], pair[1]);
+          console.log('FormData entry:', pair[0], pair[1]);
         }
+        console.log('=== End FormData Debug ===');
 
         response = await fetch('/api/users/profile', {
           method: "PUT",
@@ -230,9 +232,16 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({ isOpen, onOpenChange,
         });
       } else {
         // Fallback to JSON if no file
+        console.log('=== JSON Debug ===');
+        console.log('Sending user data as JSON:', user);
+        console.log('=== End JSON Debug ===');
+        
         response = await fetch('/api/users/profile', {
           method: "PUT",
           credentials: "include",
+          headers: {
+            'Content-Type': 'application/json',
+          },
           body: JSON.stringify(user),
         });
       }
@@ -240,10 +249,22 @@ const EditProfileForm: React.FC<EditProfileFormProps> = ({ isOpen, onOpenChange,
       console.log('Response status:', response.status);
       console.log('Response headers:', Object.fromEntries(response.headers.entries()));
       
+      // Try to get response body for debugging
+      const responseText = await response.text();
+      console.log('Response body:', responseText);
+      
       if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Error response:', errorData);
+        console.error('Error response:', responseText);
         throw new Error(`Failed to update profile: ${response.status} ${response.statusText}`);
+      }
+      
+      // Try to parse response as JSON if it's not empty
+      let responseData;
+      try {
+        responseData = responseText ? JSON.parse(responseText) : null;
+        console.log('Parsed response data:', responseData);
+      } catch (e) {
+        console.log('Response is not JSON:', responseText);
       }
       
       await refreshUser(); // Refresh user info from backend

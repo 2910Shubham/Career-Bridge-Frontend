@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 
-const JobPostForm = ({ onSubmit, isOpen, onOpenChange }) => {
+const JobPostForm = ({ onSubmit, isOpen, onOpenChange, initialValues = null, mode = 'create' }) => {
   const [formData, setFormData] = useState({
     jobTitle: "",
     jobDescription: "",
@@ -21,6 +21,17 @@ const JobPostForm = ({ onSubmit, isOpen, onOpenChange }) => {
     jobStatus: "Open",
   });
   const [newSkill, setNewSkill] = useState("");
+
+  React.useEffect(() => {
+    if (initialValues) {
+      setFormData({
+        ...formData,
+        ...initialValues,
+        skillsRequired: initialValues.skillsRequired || [],
+      });
+    }
+    // eslint-disable-next-line
+  }, [initialValues, isOpen]);
 
   const handleAddSkill = (e) => {
     if ((e.key === "Enter" || e.type === "blur") && newSkill.trim()) {
@@ -60,7 +71,7 @@ const JobPostForm = ({ onSubmit, isOpen, onOpenChange }) => {
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Job Post</DialogTitle>
+          <DialogTitle>{mode === 'edit' ? 'Edit Job Post' : 'Create New Job Post'}</DialogTitle>
         </DialogHeader>
         <div className="space-y-6">
           {/* Job Details */}
@@ -184,7 +195,7 @@ const JobPostForm = ({ onSubmit, isOpen, onOpenChange }) => {
           </div>
 
           {/* Job Status */}
-          {/* <div>
+          <div>
             <label className="text-sm font-medium text-slate-700 mb-2 block">Job Status</label>
             <Select value={formData.jobStatus} onValueChange={(value) => setFormData({ ...formData, jobStatus: value })}>
               <SelectTrigger>
@@ -196,7 +207,7 @@ const JobPostForm = ({ onSubmit, isOpen, onOpenChange }) => {
                 <SelectItem value="Pending">Pending</SelectItem>
               </SelectContent>
             </Select>
-          </div> */}
+          </div>
 
           {/* Submit Buttons */}
           <div className="flex gap-2 justify-end pt-4 border-t">
@@ -207,7 +218,7 @@ const JobPostForm = ({ onSubmit, isOpen, onOpenChange }) => {
               onClick={handleSubmit} 
               disabled={!formData.jobTitle || !formData.jobDescription || !formData.jobLocation}
             >
-              Create Job Post
+              {mode === 'edit' ? 'Update Job Post' : 'Create Job Post'}
             </Button>
           </div>
         </div>

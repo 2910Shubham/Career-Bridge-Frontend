@@ -32,6 +32,7 @@ const App = () => (
               <Route path="/profile" element={<ProtectedRoute><div /></ProtectedRoute>} />
               <Route path="/student-profile" element={<ProtectedRoute><StudentProfile /></ProtectedRoute>} />
               <Route path="/recruiter-profile" element={<ProtectedRoute><RecruiterProfile /></ProtectedRoute>} />
+              <Route path="/recruiter-profile/:id" element={<RecruiterProfile isPublicView={true} />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

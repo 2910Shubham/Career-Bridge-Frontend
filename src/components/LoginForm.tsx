@@ -148,6 +148,11 @@ const LoginForm: React.FC = () => {
               {isSubmitting ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
+          {/* Sign up link */}
+          <div className="mt-6 text-center">
+            <span className="text-gray-600">Don't have an account? </span>
+            <Link to="/register" className="text-primary font-semibold hover:underline">Sign up</Link>
+          </div>
         </div>
       </div>
     </div>
